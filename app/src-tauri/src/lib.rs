@@ -1,7 +1,10 @@
 pub mod bluetooth;
 pub mod protocol;
 
-use bluetooth::{open_windows_bluetooth_settings, scan_bluetooth_devices, send_bluetooth_command};
+use bluetooth::{
+    open_windows_bluetooth_settings, scan_bluetooth_devices, send_and_await_notification,
+    send_bluetooth_command,
+};
 use protocol::{crc16_modbus, NothingFrame};
 use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -199,6 +202,7 @@ pub fn run() {
             compute_crc16,
             scan_bluetooth_devices,
             send_bluetooth_command,
+            send_and_await_notification,
             open_windows_bluetooth_settings,
             set_close_to_tray,
             update_tray

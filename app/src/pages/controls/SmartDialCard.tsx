@@ -39,7 +39,9 @@ export function SmartDialCard() {
                   : '/assets/icons/bsv-smart-dial_dark.svg'
               }
               alt="Smart Dial"
-              className="max-h-full max-w-full object-contain"
+              className={`max-h-full max-w-full object-contain ${
+                isHeadphone ? 'dark:invert' : 'invert dark:invert-0'
+              }`}
             />
           </div>
           <div>
@@ -63,7 +65,9 @@ export function SmartDialCard() {
                   : '/assets/icons/bsv-smart-dial_dark.svg'
               }
               alt="Smart Dial"
-              className="max-h-full max-w-full object-contain"
+              className={`max-h-full max-w-full object-contain ${
+                isHeadphone ? 'dark:invert' : 'invert dark:invert-0'
+              }`}
             />
           </div>
           <div>
@@ -83,7 +87,7 @@ export function SmartDialCard() {
               <img
                 src="/assets/icons/ear/control/control_ic_rotate.svg"
                 alt="Rotate"
-                className="size-5 object-contain opacity-90 invert dark:invert-0"
+                className="size-5 object-contain opacity-90 dark:invert"
               />
               <span className="font-medium text-sm">{t('controls.dialRotate')}</span>
             </div>
@@ -97,7 +101,7 @@ export function SmartDialCard() {
               <img
                 src="/assets/icons/ear/control/headphone_single_press.svg"
                 alt="Press"
-                className="size-5 object-contain opacity-90 invert dark:invert-0"
+                className="size-5 object-contain opacity-90 dark:invert"
               />
               <span className="font-medium text-sm">
                 {t('controls.dialSinglePress')}

@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 pub const FRAME_SOF: u8 = 0x55;
-pub const DEFAULT_CONTROL_TWS_CRC: u16 = 0x0120;
+/// Frame control word set by `NtEarMessage.setControl` (0x160 → `60 01` on the wire).
+/// Bit 0x20 = CRC16 trailer present; same value for every device type.
+pub const DEFAULT_CONTROL_TWS_CRC: u16 = 0x0160;
 
 /// Standard CRC-16/MODBUS (`com.nothing.base.util.Utils.obtainCrc16`)
 /// Init: 0xFFFF, Polynomial: 0xA001
@@ -201,6 +203,7 @@ mod tests {
         let f = NothingFrame::encode(0xC007, 0x2A, &[1, 2, 3, 4]);
         assert_eq!(f.raw_bytes.len(), 8 + 4 + 2);
         assert_eq!(f.raw_bytes[0], FRAME_SOF);
+        assert_eq!(&f.raw_bytes[1..3], &[0x60, 0x01]);
         let d = NothingFrame::decode(&f.raw_bytes).unwrap();
         assert_eq!(d.command, 0xC007);
         assert_eq!(d.fsn, 0x2A);

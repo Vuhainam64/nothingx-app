@@ -6,6 +6,9 @@
 !/LICENSE
 !/app/
 
+# Local secrets (never commit)
+.github-token
+
 # ---- Inside app/: build output, dependencies, local files ----
 node_modules/
 /app/dist/

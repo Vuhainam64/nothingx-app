@@ -191,7 +191,7 @@ export function DeviceHeroCard() {
                     <img
                       src={ancIconSrc}
                       alt="ANC"
-                      className="size-6 object-contain brightness-200"
+                      className="size-6 object-contain invert dark:invert-0"
                     />
                   </div>
                   <div className="min-w-0">
@@ -216,7 +216,7 @@ export function DeviceHeroCard() {
                     <img
                       src="/assets/icons/ear/card_equaliser.svg"
                       alt="EQ"
-                      className="size-6 object-contain brightness-200"
+                      className="size-6 object-contain invert dark:invert-0"
                     />
                   </div>
                   <div className="min-w-0">
@@ -237,7 +237,7 @@ export function DeviceHeroCard() {
                 <img
                   src="/assets/icons/ear/ear_high_quality_audio.svg"
                   alt="Codec"
-                  className="size-4 object-contain opacity-85 invert dark:invert-0"
+                  className="size-4 object-contain opacity-85 dark:invert"
                 />
                 <span>{t('overview.audioQuality')}:</span>
               </div>

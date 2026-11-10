@@ -90,7 +90,7 @@ export function EarbudGestureCard({ side }: { side: 'left' | 'right' }) {
                 <img
                   src={GESTURE_ICON_MAP[gestureKey]}
                   alt={gestureKey}
-                  className="max-h-full max-w-full object-contain opacity-90 invert dark:invert-0"
+                  className="max-h-full max-w-full object-contain opacity-90 dark:invert"
                 />
               </div>
               <div className="min-w-0">

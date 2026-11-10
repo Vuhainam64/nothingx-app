@@ -25,7 +25,7 @@ export function EarFitTestCard() {
             <img
               src="/assets/icons/ear/ear_tip_fit_test.svg"
               alt="Ear Tip Fit Test"
-              className="max-h-full max-w-full object-contain opacity-90 invert dark:invert-0"
+              className="max-h-full max-w-full object-contain opacity-90 dark:invert"
             />
           </div>
           <div>

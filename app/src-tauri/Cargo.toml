@@ -1,6 +1,6 @@
 [package]
 name = "nothingx-desktop"
-version = "3.10.2"
+version = "1.0.0"
 description = "Nothing X PC Desktop Companion App (Tauri v2)"
 authors = ["NothingX RE Project"]
 edition = "2021"

@@ -28,7 +28,101 @@ export const OP = {
   // Controls
   GET_GESTURE: 0xc018,
   SET_GESTURE: 0xf003, // [count, (device, button, gesture, operation)*]
+  // Noise control
+  GET_ANC: 0xc01e, // [0x03]
+  SET_ANC: 0xf00f, // [0x01, mode, 0x00]
+  GET_PERSONAL_ANC: 0xc020, // → [switch, calibration]
+  SET_PERSONAL_ANC: 0xf011, // [switch, calibration]
+  FIT_TEST: 0xf014, // [1] start / [0] stop; ack 0x7014 [status]
+  NOTIFY_FIT_RESULT: 0xe00d, // [left, right]
+  // Sound
+  GET_BASS_BOOST: 0xc04e, // → [enable, raw]
+  SET_BASS_BOOST: 0xf051, // [enable, level*2] (V1)
+  // Settings
+  GET_IN_EAR: 0xc00e, // → payload[2] == 1
+  SET_IN_EAR: 0xf004, // [0x01, 0x01, enable]
+  GET_LOW_LAG: 0xc041, // → [1 on | 2 off]
+  SET_LOW_LAG: 0xf040, // [1] on / [2] off
+  GET_DUAL: 0xc027, // → [enable]
+  SET_DUAL: 0xf01a, // [enable]
+  FIND_DEVICE: 0xf002, // [side, on]; 2 = L, 3 = R, 6 = single body
+  // Telemetry
+  GET_BATTERY: 0xc007,
+  NOTIFY_BATTERY: 0xe001,
 } as const;
+
+/* ------------------------------------------------------------------ simple toggles */
+
+/**
+ * Ultra Bass. The app has two encodings: V1 `level*2` and V2 `level*5` (chosen by cloud config
+ * `privateCode == 247 || ultraBassType == 3`, models not identifiable offline). V1 is used.
+ */
+export function encodeBassBoost(enabled: boolean, level: number): number[] {
+  return [enabled ? 0x01 : 0x00, clampInt(level, 1, 5) * 2];
+}
+
+export function decodeBassBoost(payload: number[]): { enabled: boolean; level: number } | null {
+  if (payload.length < 2) return null;
+  const raw = payload[1];
+  // V1 raw = level*2 (0 means 5); a V2 reply (multiple of 5 above 10) is folded back too.
+  let level = raw === 0 ? 5 : raw > 10 && raw % 5 === 0 ? raw / 5 : Math.round(raw / 2);
+  level = clampInt(level, 1, 5);
+  return { enabled: payload[0] === 0x01, level };
+}
+
+export function encodeInEarDetection(enabled: boolean): number[] {
+  return [0x01, 0x01, enabled ? 0x01 : 0x00];
+}
+
+export function decodeInEarDetection(payload: number[]): boolean | null {
+  return payload.length >= 3 ? payload[2] === 0x01 : null;
+}
+
+export function encodeLowLag(enabled: boolean): number[] {
+  return [enabled ? 0x01 : 0x02];
+}
+
+export function decodeLowLag(payload: number[]): boolean | null {
+  return payload.length ? payload[0] === 0x01 : null;
+}
+
+export function encodeDualConnection(enabled: boolean): number[] {
+  return [enabled ? 0x01 : 0x00];
+}
+
+export function decodeDualConnection(payload: number[]): boolean | null {
+  return payload.length ? payload[0] === 0x01 : null;
+}
+
+/** Personalised ANC keeps the device's calibration byte; only the switch is toggled. */
+export function encodePersonalAnc(enabled: boolean, calibration: number | null): number[] {
+  return calibration === null ? [enabled ? 0x01 : 0x00] : [enabled ? 0x01 : 0x00, calibration];
+}
+
+export function decodePersonalAnc(payload: number[]): { enabled: boolean; calibration: number | null } | null {
+  if (!payload.length) return null;
+  return { enabled: payload[0] === 0x01, calibration: payload.length > 1 ? payload[1] : null };
+}
+
+export function encodeFindDevice(side: 'left' | 'right' | 'body', on: boolean): number[] {
+  const id = side === 'left' ? 0x02 : side === 'right' ? 0x03 : 0x06;
+  return [id, on ? 0x01 : 0x00];
+}
+
+export type FitCode = 'good' | 'poor' | 'notWorn' | 'inCall' | 'busy';
+const FIT_CODES: FitCode[] = ['good', 'poor', 'notWorn', 'inCall', 'busy'];
+
+/** 0xE00D notification `[left, right]`. */
+export function decodeFitResult(payload: number[]): { left: FitCode; right: FitCode } | null {
+  if (payload.length < 2) return null;
+  const l = FIT_CODES[payload[0]];
+  const r = FIT_CODES[payload[1]];
+  return l && r ? { left: l, right: r } : null;
+}
+
+function clampInt(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, Math.round(v)));
+}
 
 /* ------------------------------------------------------------------ little-endian helpers */
 

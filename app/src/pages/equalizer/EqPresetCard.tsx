@@ -1,20 +1,26 @@
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDeviceStore, getCurrentDevice } from '@/lib/deviceStore';
+import { useTheme } from '@/lib/theme';
 import type { EqPreset } from '@/lib/bluetoothProtocol';
 
-const EQ_COVER_MAP: Record<EqPreset, string> = {
-  balanced: '/assets/devices/equalizer_balanced.png',
-  moreBass: '/assets/devices/equalizer_bass.png',
-  moreTreble: '/assets/devices/equalizer_treble.png',
-  voice: '/assets/devices/equalizer_voice.png',
-  diracOpteo: '/assets/devices/dirac_eq_cover.png',
-  custom: '/assets/devices/equalizer_electronic.png',
-  advanced: '/assets/devices/equalizer_classical.png',
+// Cover art ships in light/dark variants (images/ear/eq/equalizer_<name>_<theme>.png).
+const EQ_COVER_NAME: Record<EqPreset, string> = {
+  balanced: 'equalizer_balanced',
+  moreBass: 'equalizer_bass',
+  moreTreble: 'equalizer_treble',
+  voice: 'equalizer_voice',
+  diracOpteo: 'dirac_eq_cover',
+  custom: 'equalizer_electronic',
+  advanced: 'equalizer_classical',
 };
+
+const eqCover = (preset: EqPreset, theme: 'light' | 'dark') =>
+  `/assets/images/ear/eq/${EQ_COVER_NAME[preset]}_${theme}.png`;
 
 export function EqPresetCard() {
   const { t } = useTranslation();
+  const { resolvedTheme } = useTheme();
   const selectedModelId = useDeviceStore((s) => s.selectedModelId);
   const eqPreset = useDeviceStore((s) => s.eqPreset);
   const customBands = useDeviceStore((s) => s.customBands);
@@ -57,7 +63,7 @@ export function EqPresetCard() {
                 >
                   <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-background/80 p-1">
                     <img
-                      src={EQ_COVER_MAP[p.id]}
+                      src={eqCover(p.id, resolvedTheme)}
                       alt={t(`equalizer.presets.${p.id}`)}
                       className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-105"
                     />

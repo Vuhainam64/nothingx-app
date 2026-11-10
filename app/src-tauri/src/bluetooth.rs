@@ -483,6 +483,34 @@ mod win_bt {
         }
     }
 
+    impl Conn {
+        /// Sends one request, then waits for an unsolicited frame with command `notify_cmd`
+        /// (e.g. fit test 0xF014 → result notification 0xE00D). The ack is ignored.
+        fn send_and_wait_for(
+            &mut self,
+            command: u16,
+            payload: &[u8],
+            notify_cmd: u16,
+            timeout: Duration,
+        ) -> Result<Option<NothingFrame>, String> {
+            self.buf.clear();
+            let pkt = NothingFrame::encode(command, next_fsn(), payload);
+            self.sock.send_all(&pkt.raw_bytes)?;
+            let deadline = Instant::now() + timeout;
+            loop {
+                if let Some(frame) = extract_frames(&mut self.buf)
+                    .into_iter()
+                    .find(|f| f.command == notify_cmd)
+                {
+                    return Ok(Some(frame));
+                }
+                if !self.sock.read_more(&mut self.buf, deadline)? {
+                    return Ok(None);
+                }
+            }
+        }
+    }
+
     type Slot = Arc<Mutex<Option<Conn>>>;
 
     /// One slot per device MAC. The per-slot mutex serialises traffic to that device.
@@ -611,8 +639,8 @@ mod win_bt {
             Err(_) => return,
         }
 
-        // 4. ANC status (0xC01E)
-        match read(0xC01E) {
+        // 4. ANC status (0xC01E, payload [0x03] like the app's getANC)
+        match transact(mac, 0xC01E, &[0x03], PROBE_TIMEOUT) {
             Ok(Some(frame)) => dev.anc_raw = Some(frame.payload),
             Ok(None) => {}
             Err(_) => return,
@@ -755,6 +783,27 @@ mod win_bt {
         }
     }
 
+    /// Like `transact`, but resolves with the first `notify_cmd` frame after sending.
+    pub fn send_and_wait_notification(
+        mac_u64: u64,
+        command: u16,
+        payload: &[u8],
+        notify_cmd: u16,
+        timeout: Duration,
+    ) -> Result<Option<NothingFrame>, String> {
+        let slot = slot_for(mac_u64);
+        let mut guard = slot.lock().unwrap_or_else(|e| e.into_inner());
+        let conn = match guard.as_mut() {
+            Some(c) => c,
+            None => guard.insert(Conn::open(mac_u64)?),
+        };
+        let r = conn.send_and_wait_for(command, payload, notify_cmd, timeout);
+        if r.is_err() {
+            *guard = None;
+        }
+        r
+    }
+
     pub fn send_command_to_device(
         mac_u64: u64,
         command: u16,
@@ -792,6 +841,36 @@ fn send_blocking(
         let _ = (mac_u64, command, payload);
         Err("Windows only".into())
     }
+}
+
+/// Sends `command`, then waits up to `timeout_ms` for a notification frame `notify_cmd`.
+#[tauri::command]
+pub async fn send_and_await_notification(
+    mac_u64: u64,
+    command: u16,
+    payload: Vec<u8>,
+    notify_cmd: u16,
+    timeout_ms: u64,
+) -> Result<Option<NothingFrame>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(target_os = "windows")]
+        {
+            win_bt::send_and_wait_notification(
+                mac_u64,
+                command,
+                &payload,
+                notify_cmd,
+                std::time::Duration::from_millis(timeout_ms.min(30_000)),
+            )
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = (mac_u64, command, payload, notify_cmd, timeout_ms);
+            Err::<Option<NothingFrame>, String>("Windows only".into())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Enumerates paired Nothing/CMF devices and probes connected ones, off the main thread.

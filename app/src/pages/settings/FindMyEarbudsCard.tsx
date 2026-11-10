@@ -32,7 +32,7 @@ export function FindMyEarbudsCard() {
                 : '/assets/icons/ear/ear_device_find_start.png'
             }
             alt={device.name}
-            className={`max-h-full max-w-full object-contain ${
+            className={`max-h-full max-w-full object-contain invert dark:invert-0 ${
               isRinging ? 'animate-pulse' : ''
             }`}
           />

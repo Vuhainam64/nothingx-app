@@ -38,6 +38,18 @@ import {
   DIAL_PRESS_ALLOWED,
   encodeSmartDialRotate,
   encodeSmartDialPress,
+  encodeBassBoost,
+  decodeBassBoost,
+  encodeInEarDetection,
+  decodeInEarDetection,
+  encodeLowLag,
+  decodeLowLag,
+  encodeDualConnection,
+  decodeDualConnection,
+  encodePersonalAnc,
+  decodePersonalAnc,
+  encodeFindDevice,
+  decodeFitResult,
   type SpatialMode,
   type HwCommand,
 } from './nothingCommands';
@@ -338,6 +350,12 @@ function sendHardwareCommandsDebounced(key: string, build: () => HwCommand[], de
   );
 }
 
+/** Headphones / neckband ring as one body (device id 6); buds ring per side. */
+function findSide(side: 'left' | 'right'): 'left' | 'right' | 'body' {
+  const { selectedModelId } = useDeviceStore.getState();
+  return getCurrentDevice(selectedModelId).formFactor === 'tws' ? side : 'body';
+}
+
 function isHardwareActive(): boolean {
   const { connectionMode, activeMacU64 } = useDeviceStore.getState();
   return isDesktop() && connectionMode === 'connected' && !!activeMacU64;
@@ -355,23 +373,34 @@ function parseEqFromHardware(presetIndex: number | null): EqPreset | null {
   return eqPresetFromMode(presetIndex);
 }
 
-/**
- * TODO(protocol): the exact 0xF014 reply layout is unconfirmed. We accept a payload of
- * at least two bytes [left, right] where 0x00 = good seal and 0x01 = poor seal; anything
- * else is treated as unparseable (result stays null).
- */
+/** 0xE00D notification `[left, right]`: 0 good seal, 1 poor seal, 2 not worn, 3 in call, 4 busy. */
 function parseEarFitResult(frame: NothingFrame | null): EarFitResult | null {
-  const p = frame?.payload;
-  if (!p || p.length < 2) return null;
-  const map = (b: number): EarFitStatus | null =>
-    b === 0x00 ? 'good' : b === 0x01 ? 'poor' : null;
-  const left = map(p[0]);
-  const right = map(p[1]);
-  if (!left || !right) return null;
-  return { left, right };
+  const r = frame?.payload ? decodeFitResult(frame.payload) : null;
+  if (!r) return null;
+  // 2 = not worn, 3 = in a call, 4 = repeated operation → no seal verdict.
+  const ok = (c: string): c is EarFitStatus => c === 'good' || c === 'poor';
+  return ok(r.left) && ok(r.right) ? { left: r.left, right: r.right } : null;
 }
 
-const EAR_FIT_TIMEOUT_MS = 8000;
+/** Fit test: send 0xF014 [1] and wait for the 0xE00D result notification. */
+async function runHardwareFitTest(): Promise<NothingFrame | null> {
+  const { activeMacU64 } = useDeviceStore.getState();
+  if (!isHardwareActive() || !activeMacU64) return null;
+  try {
+    return await tauriInvoke<NothingFrame | null>('send_and_await_notification', {
+      macU64: activeMacU64,
+      command: OP.FIT_TEST,
+      payload: [0x01],
+      notifyCmd: OP.NOTIFY_FIT_RESULT,
+      timeoutMs: EAR_FIT_TIMEOUT_MS,
+    });
+  } catch (err) {
+    reportCommandError(err);
+    return null;
+  }
+}
+
+const EAR_FIT_TIMEOUT_MS = 15000;
 const BATTERY_POLL_MS = 60_000;
 const TRAY_DEBOUNCE_MS = 300;
 
@@ -393,6 +422,8 @@ const DEMO_BATTERY_SINGLE: BatteryState = {
 };
 
 let scanInFlight: Promise<void> | null = null;
+/** Calibration byte from 0xC020, echoed back on 0xF011 so toggling never resets it. */
+let personalAncCalibration: number | null = null;
 
 export interface DeviceStoreState {
   selectedModelId: string;
@@ -627,6 +658,34 @@ export const useDeviceStore = create<DeviceStoreState>()(
         const q = (cmd: number, payload: number[] = []) =>
           sendHardwareCommand(cmd, payload, { silent: true });
 
+        {
+          const f = await q(OP.GET_IN_EAR);
+          const v = f?.payload ? decodeInEarDetection(f.payload) : null;
+          if (v !== null) set({ inEarDetection: v });
+        }
+        {
+          const f = await q(OP.GET_LOW_LAG);
+          const v = f?.payload ? decodeLowLag(f.payload) : null;
+          if (v !== null) set({ lowLatencyMode: v });
+        }
+        if (device.supportsDualConnection) {
+          const f = await q(OP.GET_DUAL);
+          const v = f?.payload ? decodeDualConnection(f.payload) : null;
+          if (v !== null) set({ dualConnection: v });
+        }
+        if (device.supportsPersonalAnc) {
+          const f = await q(OP.GET_PERSONAL_ANC);
+          const v = f?.payload ? decodePersonalAnc(f.payload) : null;
+          if (v) {
+            personalAncCalibration = v.calibration;
+            set({ personalAnc: v.enabled });
+          }
+        }
+        if (device.supportsUltraBass) {
+          const f = await q(OP.GET_BASS_BOOST);
+          const v = f?.payload ? decodeBassBoost(f.payload) : null;
+          if (v) set({ ultraBassEnabled: v.enabled, ultraBassLevel: v.level });
+        }
         if (device.supportsSpatialAudio) {
           const f = await q(OP.GET_SPATIAL_AUDIO);
           if (f?.payload?.length) set({ spatialAudio: decodeSpatialAudio(f.payload) });
@@ -793,17 +852,17 @@ export const useDeviceStore = create<DeviceStoreState>()(
 
       setAncMode: (mode) => {
         set({ ancMode: mode });
-        void sendHardwareCommand(0xf00f, [0x01, ancByte(mode, get().ancLevel), 0x00]);
+        void sendHardwareCommand(OP.SET_ANC, [0x01, ancByte(mode, get().ancLevel), 0x00]);
       },
 
       setAncLevel: (level) => {
         set({ ancLevel: level, ancMode: 'anc' });
-        void sendHardwareCommand(0xf00f, [0x01, ancByte('anc', level), 0x00]);
+        void sendHardwareCommand(OP.SET_ANC, [0x01, ancByte('anc', level), 0x00]);
       },
 
       setPersonalAnc: (enabled) => {
         set({ personalAnc: enabled });
-        void sendHardwareCommand(0xf015, [enabled ? 0x01 : 0x00]);
+        void sendHardwareCommand(OP.SET_PERSONAL_ANC, encodePersonalAnc(enabled, personalAncCalibration));
       },
 
       runEarFitTest: () => {
@@ -812,10 +871,7 @@ export const useDeviceStore = create<DeviceStoreState>()(
 
         if (isHardwareActive()) {
           set({ earFitRunning: true, earFitResult: null, earFitSimulated: false });
-          const timeout = new Promise<null>((resolve) =>
-            setTimeout(() => resolve(null), EAR_FIT_TIMEOUT_MS),
-          );
-          void Promise.race([sendHardwareCommand(0xf014, [0x01]), timeout]).then(
+          void runHardwareFitTest().then(
             (frame) => {
               set({
                 earFitRunning: false,
@@ -887,7 +943,7 @@ export const useDeviceStore = create<DeviceStoreState>()(
       setUltraBass: (enabled, level) => {
         const nextLevel = level ?? get().ultraBassLevel;
         set({ ultraBassEnabled: enabled, ultraBassLevel: nextLevel });
-        sendHardwareCommandDebounced(0xf01d, [enabled ? 0x01 : 0x00, (nextLevel * 2) & 0xff]);
+        sendHardwareCommandDebounced(OP.SET_BASS_BOOST, encodeBassBoost(enabled, nextLevel));
       },
 
       setSpatialAudio: (mode) => {
@@ -924,17 +980,17 @@ export const useDeviceStore = create<DeviceStoreState>()(
 
       setInEarDetection: (enabled) => {
         set({ inEarDetection: enabled });
-        void sendHardwareCommand(0xf004, [0x01, enabled ? 0x01 : 0x00]);
+        void sendHardwareCommand(OP.SET_IN_EAR, encodeInEarDetection(enabled));
       },
 
       setLowLatencyMode: (enabled) => {
         set({ lowLatencyMode: enabled });
-        void sendHardwareCommand(0xf040, [enabled ? 0x01 : 0x00, 0x00]);
+        void sendHardwareCommand(OP.SET_LOW_LAG, encodeLowLag(enabled));
       },
 
       setDualConnection: (enabled) => {
         set({ dualConnection: enabled });
-        void sendHardwareCommand(0xf020, [enabled ? 0x01 : 0x00]);
+        void sendHardwareCommand(OP.SET_DUAL, encodeDualConnection(enabled));
       },
 
       setHighResCodec: (enabled) => {
@@ -948,12 +1004,12 @@ export const useDeviceStore = create<DeviceStoreState>()(
           const next = !get().ringingLeft;
           set({ ringingLeft: next });
           setFindTonePlaying(next || get().ringingRight);
-          void sendHardwareCommand(0xf002, [0x02, next ? 0x01 : 0x00]);
+          void sendHardwareCommand(OP.FIND_DEVICE, encodeFindDevice(findSide('left'), next));
         } else {
           const next = !get().ringingRight;
           set({ ringingRight: next });
           setFindTonePlaying(next || get().ringingLeft);
-          void sendHardwareCommand(0xf002, [0x03, next ? 0x01 : 0x00]);
+          void sendHardwareCommand(OP.FIND_DEVICE, encodeFindDevice(findSide('right'), next));
         }
       },
 
@@ -1030,7 +1086,7 @@ let batteryTimer: ReturnType<typeof setInterval> | null = null;
 
 async function pollBattery() {
   if (!isHardwareActive()) return;
-  const frame = await sendHardwareCommand(0xc007, [], { silent: true });
+  const frame = await sendHardwareCommand(OP.GET_BATTERY, [], { silent: true });
   const parsed = parseBatteryPayload(frame?.payload);
   if (!parsed || !isHardwareActive()) return;
   useDeviceStore.setState((state) => {

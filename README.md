@@ -6,15 +6,18 @@
 
 ## Tính năng
 
-| Nhóm | Chức năng | Trạng thái |
-|---|---|---|
-| Thiết bị | Tự quét tai nghe Nothing/CMF đã ghép đôi trên Windows, nhận diện model & màu (FastPair Model ID + tên), đọc pin L/R/hộp sạc, firmware, serial | ✅ Gửi lệnh thật |
-| Chống ồn | ANC / Xuyên âm / Tắt, mức Cao / Trung bình / Thấp / Thích ứng, ANC cá nhân hoá | ✅ Gửi lệnh thật |
-| Âm thanh | EQ preset, EQ tuỳ chỉnh 3 dải, Ultra Bass | ✅ Gửi lệnh thật |
-| Cài đặt | Phát hiện đeo tai, chế độ độ trễ thấp, kết nối kép, tìm tai nghe (phát chuông L/R), kiểm tra độ vừa tai | ✅ Gửi lệnh thật (kết quả fit test chưa xác minh) |
-| Chưa nối giao thức | Giảm ồn gió, Spatial Audio, cử chỉ chạm, Smart Dial, Hi-Res codec, Parametric EQ 8 dải | 🟡 Chỉ giao diện (`TODO(protocol)`) |
-| Cửa sổ | Chế độ đầy đủ, widget Mini góc taskbar (luôn ở trên), ẩn xuống system tray, menu tray đổi ANC nhanh, tooltip tray hiển thị pin | ✅ |
-| Giao diện | 4 phong cách (Premium, Liquid, Aurora, Shapes) × sáng/tối, đa ngôn ngữ **Tiếng Việt / English / 简体中文** | ✅ |
+| Nhóm | Chức năng |
+|---|---|
+| Thiết bị | Tự quét tai nghe Nothing/CMF đã ghép đôi trên Windows, nhận diện model & màu (FastPair Model ID + tên), đọc pin L/R/hộp sạc (tự cập nhật mỗi 60 giây), firmware, serial |
+| Chống ồn | ANC / Xuyên âm / Tắt, mức Cao / Trung bình / Thấp / Thích ứng, ANC cá nhân hoá, kiểm tra độ vừa tai (kết quả từng bên tai) |
+| Âm thanh | EQ preset, EQ tuỳ chỉnh 3 dải, Parametric EQ 8 dải (bộ lọc peaking), Dirac Opteo, Ultra Bass 1–5, Spatial Audio (Cố định / Head tracking / Concert / Cinema / Game), Hi-Res LDAC / LHDC |
+| Điều khiển | Cử chỉ bóp từng bên tai (2 lần, 3 lần, giữ, 2 lần + giữ) — chỉ cho chọn các hành động tai nghe chấp nhận; Smart Dial trên hộp sạc CMF Buds Pro 2 |
+| Cài đặt | Phát hiện đeo tai, chế độ độ trễ thấp, kết nối kép, tìm tai nghe (phát chuông L/R) |
+| Đồng bộ | Khi kết nối, app đọc lại trạng thái từ tai nghe (ANC, EQ, Spatial, codec, Ultra Bass, cử chỉ, các công tắc) để giao diện khớp với thiết bị |
+| Cửa sổ | Chế độ đầy đủ, widget Mini góc taskbar (luôn ở trên), ẩn xuống system tray, menu tray đổi ANC nhanh, tooltip tray hiển thị pin |
+| Giao diện | 4 phong cách (Premium, Liquid, Aurora, Shapes) × sáng/tối, đa ngôn ngữ **Tiếng Việt / English / 简体中文** |
+
+Mọi opcode và định dạng payload đều được đối chiếu với mã Dart đã dịch ngược (blutter) của Nothing X 3.10.2 — xem phần [Giao thức](#giao-thức-tóm-tắt). Một số chi tiết vẫn là suy luận và được ghi rõ bên dưới.
 
 Khi không có tai nghe kết nối, app chạy ở **chế độ demo** — có thể chọn bất kỳ model nào trong danh mục (13 model) để xem trước tính năng.
 
@@ -70,6 +73,7 @@ app/
 │   ├── lib/
 │   │   ├── deviceStore.ts    # Zustand store: trạng thái thiết bị, gửi lệnh, poll pin, tray, lưu cài đặt
 │   │   ├── deviceCatalog.ts  # Danh mục 13 model: màu, ảnh, cờ tính năng
+│   │   ├── nothingCommands.ts    # Opcode + bộ mã hoá/giải mã payload (EQ, Spatial, cử chỉ…)
 │   │   ├── bluetoothProtocol.ts  # Kiểu dữ liệu, mapping ANC, parse payload pin
 │   │   └── theme.tsx         # Sáng/tối + 4 phong cách giao diện
 │   ├── layouts/dashboard/    # Khung app, sidebar, header, widget Mini, thanh tray
@@ -93,33 +97,47 @@ Tai nghe giao tiếp qua RFCOMM với service UUID `aeac4a03-dff5-498f-843a-3448
 | Byte | Trường | Ghi chú |
 |---|---|---|
 | 0 | SOF | `0x55` |
-| 1–2 | Control | `0x0120` — bit `0x0020` = có CRC |
+| 1–2 | Control | `0x0160` (`60 01` trên dây) — bit `0x0020` = có CRC |
 | 3–4 | Command | opcode |
 | 5–6 | Length | độ dài payload |
-| 7 | FSN | số thứ tự frame |
+| 7 | FSN | số thứ tự frame (1–255, quay vòng về 1) |
 | 8… | Payload | |
 | cuối | CRC16 | CRC-16/MODBUS (init `0xFFFF`, poly `0xA001`) trên toàn bộ phần trước |
 
-Opcode đang dùng:
+Phản hồi của lệnh `cmd` mang mã `cmd & 0x7FFF`: truy vấn `0xC0xx` → `0x40xx`, lệnh ghi `0xF0xx` → ack `0x70xx`. Thông báo chủ động từ tai nghe là `0xE0xx`.
 
-| Opcode | Ý nghĩa |
-|---|---|
-| `0xC007` | Đọc pin (`[count, (id, level\|0x80 khi sạc)…]`, id `2`=L `3`=R `4`=hộp, `1`/`6`=pin đơn) |
-| `0xC042` / `0xC006` | Đọc firmware / thông tin mở rộng (serial) |
-| `0xC01E` / `0xF00F` | Đọc / đặt ANC (`0x01`–`0x04` mức ANC, `0x05` tắt, `0x07` xuyên âm) |
-| `0xC01F` / `0xF010` | Đọc / đặt EQ preset |
-| `0xF041` | EQ tuỳ chỉnh 3 dải |
-| `0xF01D` | Ultra Bass |
-| `0xF015` | ANC cá nhân hoá |
-| `0xF004` | Phát hiện đeo tai |
-| `0xF040` | Chế độ độ trễ thấp |
-| `0xF020` | Kết nối kép |
-| `0xF002` | Tìm tai nghe (phát chuông) |
-| `0xF014` | Kiểm tra độ vừa tai |
+| Tính năng | Đọc | Ghi | Payload ghi |
+|---|---|---|---|
+| Pin | `C007` (+ thông báo `E001`) | — | — · phản hồi `[n, (id, mức\|0x80 khi sạc)…]`, id `2`=L `3`=R `4`=hộp |
+| Firmware / serial | `C042` / `C006` | — | — |
+| ANC | `C01E [03]` (+ `E003`) | `F00F` | `[01, mode, 00]` — `1`–`4` mức ANC, `5` tắt, `7` xuyên âm |
+| ANC cá nhân hoá | `C020` | `F011` | `[bật, hiệu chuẩn]` |
+| Kiểm tra độ vừa tai | — | `F014` | `[01]` bắt đầu · kết quả qua thông báo `E00D [L, R]` (0 vừa, 1 chưa kín, 2 chưa đeo…) |
+| EQ preset | `C01F` | `F010` | `[mode]` — 0 balanced, 1 voice, 2 treble, 3 bass, 5 custom |
+| EQ nâng cao bật/tắt | `C04C` | `F04F` | `[01]` / `[00]` |
+| EQ tuỳ chỉnh 3 dải | `C044` | `F041` | 44 byte: `[3, f32 total, 3 × (type, f32 gain, f32 freq, f32 Q)]` |
+| Parametric EQ | `C04D [00]` | `F050` | `[00, n, f32 total, n × (01, f32 gain, f32 freq, f32 Q)]` (110 byte với 8 dải) |
+| Dirac Opteo | `C050` | `F01D` | `[diracMode]` |
+| Ultra Bass | `C04E` | `F051` | `[bật, mức × 2]` |
+| Spatial Audio | `C04F` | `F052` | `[mode, head]` — `00 00` tắt, `01 00` cố định, `01 01` head tracking, `02 00` concert, `03 00` cinema, `04 00` game |
+| Hi-Res codec | `C029` | `F01C` | `[00]` AAC · `[01]` LHDC · `[02]` LDAC |
+| Cử chỉ / Smart Dial | `C018` | `F003` | `[n, (thiết bị, nút, cử chỉ, hành động)…]` |
+| Phát hiện đeo tai | `C00E` | `F004` | `[01, 01, bật]` |
+| Độ trễ thấp | `C041` | `F040` | `[01]` bật · `[02]` tắt |
+| Kết nối kép | `C027` | `F01A` | `[bật]` |
+| Tìm tai nghe | — | `F002` | `[bên, bật]` — `2` L, `3` R, `6` headphone/neckband |
+
+Mã cử chỉ: thiết bị `2` L, `3` R, `4` hộp sạc, `6` headphone/neckband · cử chỉ `2` bóp 2 lần, `3` bóp 3 lần, `7` giữ, `9` bóp 2 lần + giữ, `10` xoay núm · hành động `1` không làm gì, `2` phát/tạm dừng, `8` bài trước, `9` bài sau, `11` trợ lý ảo, `18`/`19` tăng/giảm âm lượng, `22` ANC ↔ xuyên âm, `23` âm lượng (xoay núm).
 
 Model ID được đọc qua kênh Google Fast Pair message stream (`df21fe2c-2515-4fdb-8886-f12c4d67927c`, group `0x03` code `0x01`).
 
-Một số chi tiết (mã phản hồi của lệnh đọc, định dạng kết quả fit test) vẫn là suy luận và cần xác minh thêm bằng capture từ thiết bị thật. Đóng góp log/capture rất được hoan nghênh.
+**Còn là suy luận / chưa xác minh trên phần cứng:**
+- Ultra Bass có hai cách mã hoá (`mức × 2` và `mức × 5`); app gốc chọn theo cấu hình cloud của từng model. App này dùng `× 2`.
+- Định dạng phản hồi của truy vấn độ trễ thấp (`C041`).
+- Smart Dial trên Headphone (1), Headphone Pro, Neckband Pro do firmware cố định nên không chỉnh được.
+- Giảm ồn gió không có trong app gốc nên không được hỗ trợ.
+
+Log/capture từ thiết bị thật để xác minh rất được hoan nghênh.
 
 ## Công nghệ
 
@@ -129,7 +147,7 @@ Tauri 2 · Rust · React 19 · TypeScript · Vite 7 · Tailwind CSS 4 · Radix U
 
 Issue và pull request đều được chào đón — đặc biệt là:
 - xác minh opcode trên các model khác nhau,
-- opcode cho các tính năng đang `TODO(protocol)`,
+- xác minh các điểm còn là suy luận ở trên,
 - bản dịch mới (thêm thư mục trong `app/src/i18n/locales/`, giữ cùng bộ key).
 
 ## Miễn trừ trách nhiệm
