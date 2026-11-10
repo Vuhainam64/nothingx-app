@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   useDeviceStore,
+  useCapabilities,
   getCurrentDevice,
   getCurrentColor,
 } from '@/lib/deviceStore';
+import { eqPickerLabel, eqPickerValue } from '@/components/device/capabilityUi';
 
 export function DeviceHeroCard() {
   const { t } = useTranslation();
@@ -26,6 +28,8 @@ export function DeviceHeroCard() {
   const ancMode = useDeviceStore((s) => s.ancMode);
   const ancLevel = useDeviceStore((s) => s.ancLevel);
   const eqPreset = useDeviceStore((s) => s.eqPreset);
+  const diracMode = useDeviceStore((s) => s.diracMode);
+  const caps = useCapabilities();
   const highResCodec = useDeviceStore((s) => s.highResCodec);
   const connectionMode = useDeviceStore((s) => s.connectionMode);
   const activeMacAddress = useDeviceStore((s) => s.activeMacAddress);
@@ -41,7 +45,10 @@ export function DeviceHeroCard() {
       ? `${t('anc.modes.anc')} • ${t(`anc.levels.${ancLevel}`)}`
       : t(`anc.modes.${ancMode}`);
 
-  const eqSummary = t(`equalizer.presets.${eqPreset}`);
+  const eqValue = eqPickerValue(caps, eqPreset, diracMode);
+  const eqSummary = eqValue ? eqPickerLabel(t, eqValue) : t(`equalizer.presets.${eqPreset}`);
+  const codecs = caps.highResCodecs.map((c) => c.toUpperCase()).join(' / ');
+  const hasNoiseControl = caps.anc || caps.transparency;
 
   const ancIconSrc =
     ancMode === 'anc'
@@ -61,12 +68,12 @@ export function DeviceHeroCard() {
             <Badge variant="outline" className="absolute top-3.5 left-3.5 z-10 text-[11px]">
               {device.brand}
             </Badge>
-            {highResCodec && device.highResCodec && (
+            {highResCodec && codecs && (
               <Badge
                 variant="secondary"
                 className="absolute top-3.5 right-3.5 z-10 font-mono text-[11px]"
               >
-                {device.highResCodec}
+                {codecs}
               </Badge>
             )}
 
@@ -80,17 +87,17 @@ export function DeviceHeroCard() {
                 <div className="relative flex h-full w-full items-center justify-center gap-2 px-2">
                   <img
                     src={activeColor.leftImage}
-                    alt={`${device.name} Left`}
+                    alt={t('overview.imageAlt.left', { name: device.name })}
                     className="h-36 w-auto object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.65)] transition-transform duration-300 hover:-translate-y-1"
                   />
                   <img
                     src={activeColor.caseImage}
-                    alt={`${device.name} Case`}
+                    alt={t('overview.imageAlt.case', { name: device.name })}
                     className="h-44 w-auto object-contain drop-shadow-[0_18px_32px_rgba(0,0,0,0.75)] transition-transform duration-300 hover:scale-105"
                   />
                   <img
                     src={activeColor.rightImage}
-                    alt={`${device.name} Right`}
+                    alt={t('overview.imageAlt.right', { name: device.name })}
                     className="h-36 w-auto object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.65)] transition-transform duration-300 hover:-translate-y-1"
                   />
                 </div>
@@ -113,6 +120,7 @@ export function DeviceHeroCard() {
                       <button
                         type="button"
                         onClick={() => selectColor(c.sku)}
+                        aria-pressed={isSelected}
                         className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all ${
                           isSelected
                             ? 'border-primary/60 bg-accent font-medium text-foreground shadow-xs'
@@ -162,8 +170,8 @@ export function DeviceHeroCard() {
                 <BluetoothConnected
                   className={
                     connectionMode === 'connected'
-                      ? 'size-4 text-emerald-400'
-                      : 'size-4 text-amber-400'
+                      ? 'size-4 text-emerald-600 dark:text-emerald-400'
+                      : 'size-4 text-amber-600 dark:text-amber-400'
                   }
                 />
                 <span className="text-foreground">
@@ -174,37 +182,43 @@ export function DeviceHeroCard() {
               </div>
               <div className="flex items-center gap-3 text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Cpu className="size-3.5" /> FW {firmwareVersion ? `v${firmwareVersion}` : '—'}
+                  <Cpu className="size-3.5" /> {t('overview.fwShort')} {firmwareVersion ? `v${firmwareVersion}` : '—'}
                 </span>
-                {serialNumber && <span className="hidden sm:inline">SN: {serialNumber}</span>}
+                {serialNumber && (
+                  <span className="hidden sm:inline">
+                    {t('overview.snShort')} {serialNumber}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => navigate('/anc')}
-                className="group flex items-center justify-between rounded-xl border border-border bg-card/60 p-4 text-left transition-all hover:border-primary/40 hover:bg-accent/40"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/12 p-2 text-primary">
-                    <img
-                      src={ancIconSrc}
-                      alt="ANC"
-                      className="size-6 object-contain invert dark:invert-0"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-muted-foreground text-xs">
-                      {t('overview.quickAnc')}
+            <div className={`grid grid-cols-1 gap-3 ${hasNoiseControl ? 'sm:grid-cols-2' : ''}`}>
+              {hasNoiseControl && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/anc')}
+                  className="group flex items-center justify-between rounded-xl border border-border bg-card/60 p-4 text-left transition-all hover:border-primary/40 hover:bg-accent/40"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/12 p-2 text-primary">
+                      <img
+                        src={ancIconSrc}
+                        alt=""
+                        className="size-6 object-contain invert dark:invert-0"
+                      />
                     </div>
-                    <div className="mt-0.5 truncate font-semibold text-sm">
-                      {ancSummary}
+                    <div className="min-w-0">
+                      <div className="text-muted-foreground text-xs">
+                        {t('overview.quickAnc')}
+                      </div>
+                      <div className="mt-0.5 truncate font-semibold text-sm">
+                        {ancSummary}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-              </button>
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                </button>
+              )}
 
               <button
                 type="button"
@@ -215,7 +229,7 @@ export function DeviceHeroCard() {
                   <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/12 p-2 text-primary">
                     <img
                       src="/assets/icons/ear/card_equaliser.svg"
-                      alt="EQ"
+                      alt=""
                       className="size-6 object-contain invert dark:invert-0"
                     />
                   </div>
@@ -236,15 +250,15 @@ export function DeviceHeroCard() {
               <div className="flex items-center gap-2 text-muted-foreground">
                 <img
                   src="/assets/icons/ear/ear_high_quality_audio.svg"
-                  alt="Codec"
+                  alt=""
                   className="size-4 object-contain opacity-85 dark:invert"
                 />
                 <span>{t('overview.audioQuality')}:</span>
               </div>
               <span className="font-medium text-foreground">
-                {device.highResCodec
-                  ? `${device.highResCodec} Hi-Res Wireless Audio`
-                  : 'AAC / SBC High Definition'}
+                {codecs
+                  ? t('overview.hiResQuality', { codecs })
+                  : t('overview.standardQuality')}
               </span>
             </div>
           </div>

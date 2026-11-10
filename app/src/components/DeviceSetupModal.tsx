@@ -2,8 +2,10 @@ import {
   Bluetooth,
   BluetoothConnected,
   BluetoothSearching,
+  AlertTriangle,
   CheckCircle2,
   ExternalLink,
+  HelpCircle,
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
@@ -18,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DEVICE_CATALOG } from '@/lib/deviceCatalog';
+import { useTheme } from '@/lib/theme';
 import {
   useDeviceStore,
   getCurrentColor,
@@ -43,8 +46,13 @@ export function DeviceSetupModal() {
   );
   const selectDevice = useDeviceStore((s) => s.selectDevice);
 
+  const { resolvedTheme } = useTheme();
   const currentDevice = getCurrentDevice(selectedModelId);
   const currentColor = getCurrentColor(currentDevice, selectedColorSku);
+  const isConnected = connectionMode === 'connected';
+  const inCatalog = (modelId: string) => DEVICE_CATALOG.some((d) => d.modelId === modelId);
+  const selectedUnknown = !inCatalog(selectedModelId);
+  const genericImage = `/assets/icons/launch/onboarding_bluetooth_${resolvedTheme}.png`;
 
   return (
     <Dialog open={setupModalOpen} onOpenChange={setSetupModalOpen}>
@@ -122,11 +130,13 @@ export function DeviceSetupModal() {
             {detectedDevices.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">
                 {detectedDevices.map((dev) => {
+                  const known = inCatalog(dev.matched_model_id);
                   const catDev = getCurrentDevice(dev.matched_model_id);
                   const catColor = getCurrentColor(
                     catDev,
                     dev.matched_color_sku ?? catDev.colors[0]?.sku ?? '',
                   );
+                  const image = known ? catColor.heroImage : genericImage;
                   const isCurrentActive =
                     connectionMode === 'connected' &&
                     activeMacAddress === dev.mac_address;
@@ -144,14 +154,14 @@ export function DeviceSetupModal() {
                       <div className="flex items-center gap-4">
                         <div className="relative flex size-20 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-background/80 p-2">
                           <img
-                            src={catColor.heroImage}
+                            src={image}
                             alt={dev.name}
                             className="max-h-full max-w-full object-contain drop-shadow-md"
                           />
                           <span
                             className={cn(
                               'absolute -top-1 -right-1 size-3 rounded-full border-2 border-background',
-                              dev.connected ? 'bg-emerald-400' : 'bg-amber-400',
+                              dev.connected ? 'bg-emerald-500' : 'bg-amber-500',
                             )}
                           />
                         </div>
@@ -166,32 +176,53 @@ export function DeviceSetupModal() {
                               className={cn(
                                 'font-mono text-[10px]',
                                 dev.connected &&
-                                  'border-emerald-500/40 bg-emerald-500/15 text-emerald-400',
+                                  'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400',
                               )}
                             >
                               {dev.connected
                                 ? t('setup.connectedBadge')
                                 : t('setup.pairedBadge')}
                             </Badge>
-                            <Badge variant="outline" className="font-mono text-[10px]">
-                              {catColor.colorName}
-                            </Badge>
+                            {known ? (
+                              <Badge variant="outline" className="font-mono text-[10px]">
+                                {catColor.colorName}
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="gap-1 border-amber-500/40 font-mono text-[10px] text-amber-700 dark:text-amber-400"
+                              >
+                                <HelpCircle className="size-3" />
+                                {t('setup.unknownModelBadge', { model: dev.matched_model_id || '?' })}
+                              </Badge>
+                            )}
                           </div>
 
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-muted-foreground">
-                            <span>MAC: {dev.mac_address}</span>
+                            <span>
+                              {t('overview.macLabel')} {dev.mac_address}
+                            </span>
                             {dev.battery_left !== null && (
-                              <span className="text-emerald-400">
+                              <span className="text-emerald-700 dark:text-emerald-400">
                                 {t('setup.batteryLabel')}: {dev.battery_left}%
                               </span>
                             )}
                             {dev.firmware_version && (
-                              <span>FW: v{dev.firmware_version}</span>
+                              <span>
+                                {t('overview.fwShort')} v{dev.firmware_version}
+                              </span>
                             )}
                             {dev.serial_number && (
-                              <span>SN: {dev.serial_number}</span>
+                              <span>
+                                {t('overview.snShort')} {dev.serial_number}
+                              </span>
                             )}
                           </div>
+                          {!known && (
+                            <p className="text-muted-foreground text-xs">
+                              {t('setup.unknownModelDesc')}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -282,6 +313,13 @@ export function DeviceSetupModal() {
             </div>
           )}
 
+          {isConnected && selectedUnknown && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-300">
+              <HelpCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{t('setup.unknownModelConnected', { model: selectedModelId })}</span>
+            </div>
+          )}
+
           {/* Supported Catalog Grid with Real Product Images */}
           <div className="space-y-3 border-t border-border/60 pt-4">
             <div>
@@ -292,6 +330,16 @@ export function DeviceSetupModal() {
                 {t('setup.catalogSubtitle')}
               </p>
             </div>
+
+            {isConnected && (
+              <div
+                role="note"
+                className="flex items-start gap-2.5 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>{t('setup.switchDisconnectWarning')}</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
               {DEVICE_CATALOG.map((item) => {
@@ -305,6 +353,7 @@ export function DeviceSetupModal() {
                       selectDevice(item.modelId);
                       setSetupModalOpen(false);
                     }}
+                    aria-pressed={isSelected}
                     className={cn(
                       'group flex flex-col items-center gap-2 rounded-xl border p-3 text-left transition-all',
                       isSelected
@@ -315,7 +364,7 @@ export function DeviceSetupModal() {
                     <div className="relative flex h-20 w-full items-center justify-center">
                       <img
                         src={previewImg}
-                        alt={item.name}
+                        alt=""
                         className="max-h-full max-w-full object-contain transition-transform duration-200 group-hover:scale-105"
                       />
                     </div>

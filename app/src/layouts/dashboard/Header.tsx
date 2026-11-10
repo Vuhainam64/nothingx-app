@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDeviceDisplayName } from '@/hooks/useDeviceDisplayName';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -32,6 +33,7 @@ import { SidebarNav } from './SidebarNav';
 
 export function Header() {
   const { t } = useTranslation();
+  const displayName = useDeviceDisplayName();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const selectedModelId = useDeviceStore((s) => s.selectedModelId);
@@ -74,6 +76,7 @@ export function Header() {
           size="icon-sm"
           className="md:hidden"
           onClick={() => setMobileOpen(true)}
+          aria-label={t('nav.openMenu')}
         >
           <Menu className="size-4" />
         </Button>
@@ -96,8 +99,8 @@ export function Header() {
                   className={cn(
                     'absolute -right-0.5 -bottom-0.5 size-2 rounded-full border border-background',
                     connectionMode === 'connected'
-                      ? 'bg-emerald-400'
-                      : 'bg-amber-400',
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-500',
                   )}
                 />
               </div>
@@ -105,7 +108,7 @@ export function Header() {
               <div className="min-w-0 pr-1">
                 <div className="flex items-center gap-1.5">
                   <span className="truncate font-semibold text-foreground text-xs sm:text-sm">
-                    {currentDevice.name}
+                    {displayName}
                   </span>
                 </div>
                 <p className="truncate font-mono text-[10px] text-muted-foreground">
@@ -134,6 +137,7 @@ export function Header() {
                     type="button"
                     onClick={() => selectColor(color.sku)}
                     aria-label={color.colorName}
+                    aria-pressed={active}
                     className={`size-4 rounded-full border transition-transform ${
                       active
                         ? 'scale-115 border-foreground/40 ring-2 ring-primary ring-offset-1 ring-offset-background'
@@ -201,7 +205,7 @@ export function Header() {
                 </>
               ) : connectionMode === 'connected' ? (
                 <>
-                  <BluetoothConnected className="size-3.5 text-emerald-400" />
+                  <BluetoothConnected className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span className="hidden sm:inline">
                     {t('header.resync')}
                   </span>

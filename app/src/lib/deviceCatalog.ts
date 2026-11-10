@@ -1,3 +1,5 @@
+import { getDeviceCapabilities } from './deviceCapabilities';
+
 export interface DeviceColorVariant {
   sku: string;
   colorName: string;
@@ -18,6 +20,8 @@ export interface DeviceCatalogEntry {
   formFactor: DeviceFormFactor;
   releaseYear: number;
   colors: DeviceColorVariant[];
+  // Legacy flags kept for backward compatibility. They are DERIVED from getDeviceCapabilities(modelId, null)
+  // at module init — new code should use capabilities (useCapabilities()) instead.
   supportsPersonalAnc: boolean;
   supportsParametricEq: boolean;
   supportsDiracOpteo: boolean;
@@ -28,7 +32,7 @@ export interface DeviceCatalogEntry {
   highResCodec?: 'LDAC' | 'LHDC 5.0';
 }
 
-export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
+const CATALOG_BASE: CatalogBase[] = [
   {
     modelId: 'B170',
     name: 'Nothing Headphone (1)',
@@ -57,14 +61,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B170_01_steer.png',
       },
     ],
-    supportsPersonalAnc: true,
-    supportsParametricEq: true,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: true,
-    supportsDualConnection: true,
-    supportsSmartDial: true,
-    highResCodec: 'LDAC',
   },
   {
     modelId: 'B171',
@@ -94,14 +90,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B171_02_steer.png',
       },
     ],
-    supportsPersonalAnc: true,
-    supportsParametricEq: true,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
-    highResCodec: 'LHDC 5.0',
   },
   {
     modelId: 'B162',
@@ -141,14 +129,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B162_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
-    highResCodec: 'LDAC',
   },
   {
     modelId: 'B174',
@@ -168,13 +148,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B174_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: true,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
   },
   {
     modelId: 'B155',
@@ -204,14 +177,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B155_01_steer.png',
       },
     ],
-    supportsPersonalAnc: true,
-    supportsParametricEq: true,
-    supportsDiracOpteo: false,
-    supportsUltraBass: false,
-    supportsSpatialAudio: false,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
-    highResCodec: 'LHDC 5.0',
   },
   {
     modelId: 'B181',
@@ -241,13 +206,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B181_01_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: false,
-    supportsUltraBass: false,
-    supportsSpatialAudio: false,
-    supportsDualConnection: false,
-    supportsSmartDial: false,
   },
   {
     modelId: 'B157',
@@ -267,13 +225,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B157_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: true,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: false,
-    supportsSmartDial: false,
   },
   {
     modelId: 'B172',
@@ -323,14 +274,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B172_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: true,
-    supportsUltraBass: true,
-    supportsSpatialAudio: true,
-    supportsDualConnection: true,
-    supportsSmartDial: true,
-    highResCodec: 'LDAC',
   },
   {
     modelId: 'B184',
@@ -360,14 +303,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B184_02_steer.png',
       },
     ],
-    supportsPersonalAnc: true,
-    supportsParametricEq: false,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: true,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
-    highResCodec: 'LDAC',
   },
   {
     modelId: 'B168',
@@ -407,13 +342,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B168_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: true,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: true,
-    supportsSmartDial: false,
   },
   {
     modelId: 'B163',
@@ -453,13 +381,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B163_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: false,
-    supportsDualConnection: false,
-    supportsSmartDial: false,
   },
   {
     modelId: 'B164',
@@ -499,13 +420,6 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B164_02_steer.png',
       },
     ],
-    supportsPersonalAnc: false,
-    supportsParametricEq: false,
-    supportsDiracOpteo: false,
-    supportsUltraBass: true,
-    supportsSpatialAudio: true,
-    supportsDualConnection: true,
-    supportsSmartDial: true,
   },
   {
     modelId: 'B175',
@@ -545,13 +459,234 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
         steerImage: '/assets/devices/sku/B175_06_steer.png',
       },
     ],
-    supportsPersonalAnc: true,
-    supportsParametricEq: true,
-    supportsDiracOpteo: true,
-    supportsUltraBass: true,
-    supportsSpatialAudio: true,
-    supportsDualConnection: true,
-    supportsSmartDial: true,
-    highResCodec: 'LDAC',
+  },
+  // ── Models added in v1.0.1 (ear_white_list.json + devices_info_list.json). Images are local files only;
+  //    where a SKU has no bundled art, the closest existing model's art is reused (see comments).
+  {
+    modelId: 'B173',
+    name: 'Nothing Ear (3)',
+    brand: 'Nothing',
+    formFactor: 'tws',
+    releaseYear: 2025,
+    colors: [
+      // No case/steer art in sku/ → the app's "ear_three" case art and the hero image.
+      {
+        sku: 'B173_01',
+        colorName: 'Black',
+        hex: '#1F2328',
+        heroImage: '/assets/devices/sku/B173_01_global.png',
+        leftImage: '/assets/devices/sku/B173_01_left.png',
+        rightImage: '/assets/devices/sku/B173_01_right.png',
+        caseImage: '/assets/devices/os_ear_three_black_case.png',
+        steerImage: '/assets/devices/sku/B173_01_global.png',
+      },
+      {
+        sku: 'B173_02',
+        colorName: 'White',
+        hex: '#F3F4F6',
+        heroImage: '/assets/devices/sku/B173_02_global.png',
+        leftImage: '/assets/devices/sku/B173_02_left.png',
+        rightImage: '/assets/devices/sku/B173_02_right.png',
+        caseImage: '/assets/devices/os_ear_three_white_case.png',
+        steerImage: '/assets/devices/sku/B173_02_global.png',
+      },
+    ],
+  },
+  {
+    modelId: 'B183',
+    name: 'Nothing Ear (a)',
+    brand: 'Nothing',
+    formFactor: 'tws',
+    releaseYear: 2025,
+    colors: [
+      skuColor('B183', '08', 'Yellow', '#FACC15'),
+      skuColor('B183', '01', 'Black', '#1F2328'),
+      skuColor('B183', '02', 'White', '#F3F4F6'),
+    ],
+  },
+  {
+    modelId: 'B190',
+    name: 'Nothing Ear (3a)',
+    brand: 'Nothing',
+    formFactor: 'tws',
+    releaseYear: 2026,
+    // No bundled art → reuses Ear (a) (B183) art; pink reuses white.
+    colors: [
+      skuColor('B183', '01', 'Black', '#1F2328', 'B190_01'),
+      skuColor('B183', '02', 'White', '#F3F4F6', 'B190_02'),
+      skuColor('B183', '08', 'Yellow', '#FACC15', 'B190_08'),
+      skuColor('B183', '02', 'Pink', '#F4A7B9', 'B190_10'),
+    ],
+  },
+  {
+    modelId: 'B186',
+    name: 'Nothing Headphone (a)',
+    brand: 'Nothing',
+    formFactor: 'headphone',
+    releaseYear: 2026,
+    // No SKU art → the app's "elekid" (Headphone (a) codename) renders; yellow/pink reuse white.
+    colors: [
+      singleImageColor('B186_01', 'Black', '#1F2328', '/assets/devices/elekid_black_global.png'),
+      singleImageColor('B186_02', 'White', '#F3F4F6', '/assets/devices/elekid_white_global.png'),
+      singleImageColor('B186_08', 'Yellow', '#FACC15', '/assets/devices/elekid_white_global.png'),
+      singleImageColor('B186_10', 'Pink', '#F4A7B9', '/assets/devices/elekid_white_global.png'),
+    ],
+  },
+  {
+    modelId: 'B198',
+    name: 'Nothing Headphone (a)',
+    brand: 'Nothing',
+    formFactor: 'headphone',
+    releaseYear: 2026,
+    colors: [
+      singleImageColor('B198_01', 'Black', '#1F2328', '/assets/devices/elekid_black_global.png'),
+      singleImageColor('B198_02', 'White', '#F3F4F6', '/assets/devices/elekid_white_global.png'),
+      singleImageColor('B198_08', 'Yellow', '#FACC15', '/assets/devices/elekid_white_global.png'),
+      singleImageColor('B198_10', 'Pink', '#F4A7B9', '/assets/devices/elekid_white_global.png'),
+    ],
+  },
+  {
+    modelId: 'B192',
+    name: 'Nothing Headphone (1) Pro',
+    brand: 'Nothing',
+    formFactor: 'headphone',
+    releaseYear: 2026,
+    // No bundled art → reuses Headphone (1) (B170) art.
+    colors: [
+      skuColor('B170', '01', 'Black', '#1F2328', 'B192_01'),
+      skuColor('B170', '09', 'Silver', '#E5E7EB', 'B192_02'),
+    ],
+  },
+  {
+    modelId: 'B179',
+    name: 'CMF Buds 2',
+    brand: 'CMF',
+    formFactor: 'tws',
+    releaseYear: 2025,
+    colors: [
+      skuColor('B179', '07', 'Orange', '#FF5722'),
+      skuColor('B179', '01', 'Dark Grey', '#2C3038'),
+      skuColor('B179', '06', 'Light Green', '#A3C9A8'),
+    ],
+  },
+  {
+    modelId: 'B185',
+    name: 'CMF Buds 2a',
+    brand: 'CMF',
+    formFactor: 'tws',
+    releaseYear: 2025,
+    // No global art in sku/ → the app's "hoothoot" (Buds 2a) buds render as hero.
+    colors: [
+      { ...skuColor('B185', '07', 'Orange', '#FF5722'), heroImage: '/assets/devices/hoothoot_orange_disconnect.png' },
+      { ...skuColor('B185', '01', 'Dark Grey', '#2C3038'), heroImage: '/assets/devices/hoothoot_black_disconnect.png' },
+      { ...skuColor('B185', '02', 'Light Grey', '#E5E7EB'), heroImage: '/assets/devices/hoothoot_white_disconnect.png' },
+    ],
+  },
+  {
+    modelId: 'B187',
+    name: 'CMF Buds Pro 2',
+    brand: 'CMF',
+    formFactor: 'tws',
+    releaseYear: 2025,
+    colors: [
+      skuColor('B187', '07', 'Orange', '#FF5722'),
+      skuColor('B187', '01', 'Dark Grey', '#2C3038'),
+      skuColor('B187', '03', 'Blue', '#2563EB'),
+      skuColor('B187', '02', 'Light Grey', '#E5E7EB'),
+    ],
+  },
+  {
+    modelId: 'B193',
+    name: 'CMF Buds Neo',
+    brand: 'CMF',
+    formFactor: 'tws',
+    releaseYear: 2026,
+    // No bundled art → reuses CMF Buds (B168) art; blue reuses CMF Buds Pro 2 (B172) blue.
+    colors: [
+      skuColor('B168', '01', 'Dark Grey', '#2C3038', 'B193_01'),
+      skuColor('B168', '07', 'Orange', '#FF5722', 'B193_02'),
+      skuColor('B172', '03', 'Blue', '#2563EB', 'B193_03'),
+    ],
+  },
+  {
+    modelId: 'B189',
+    name: 'CMF Clip Pro',
+    brand: 'CMF',
+    formFactor: 'tws',
+    releaseYear: 2026,
+    // No bundled art → reuses the open-ear Ear (open) (B174) art for every colour.
+    colors: [
+      skuColor('B174', '02', 'Dark Grey', '#2C3038', 'B189_01'),
+      skuColor('B174', '02', 'Light Grey', '#E5E7EB', 'B189_02'),
+      skuColor('B174', '02', 'Blue', '#2563EB', 'B189_03'),
+      skuColor('B174', '02', 'Orange', '#FF5722', 'B189_07'),
+    ],
   },
 ];
+
+/** Fields that are derived from the per-model config rather than written by hand. */
+type DerivedField =
+  | 'supportsPersonalAnc'
+  | 'supportsParametricEq'
+  | 'supportsDiracOpteo'
+  | 'supportsUltraBass'
+  | 'supportsSpatialAudio'
+  | 'supportsDualConnection'
+  | 'supportsSmartDial'
+  | 'highResCodec';
+type CatalogBase = Omit<DeviceCatalogEntry, DerivedField>;
+
+function skuColor(
+  artModel: string,
+  colorId: string,
+  colorName: string,
+  hex: string,
+  sku = `${artModel}_${colorId}`,
+): DeviceColorVariant {
+  const base = `/assets/devices/sku/${artModel}_${colorId}`;
+  return {
+    sku,
+    colorName,
+    hex,
+    heroImage: `${base}_global.png`,
+    leftImage: `${base}_left.png`,
+    rightImage: `${base}_right.png`,
+    caseImage: `${base}_case.png`,
+    steerImage: `${base}_steer.png`,
+  };
+}
+
+function singleImageColor(sku: string, colorName: string, hex: string, image: string): DeviceColorVariant {
+  return {
+    sku,
+    colorName,
+    hex,
+    heroImage: image,
+    leftImage: image,
+    rightImage: image,
+    caseImage: image,
+    steerImage: image,
+  };
+}
+
+function withDerivedFlags(entry: CatalogBase): DeviceCatalogEntry {
+  const caps = getDeviceCapabilities(entry.modelId, null);
+  const highResCodec: DeviceCatalogEntry['highResCodec'] = caps.highResCodecs.includes('lhdc')
+    ? 'LHDC 5.0'
+    : caps.highResCodecs.includes('ldac')
+      ? 'LDAC'
+      : undefined;
+  return {
+    ...entry,
+    supportsPersonalAnc: caps.personalAnc,
+    supportsParametricEq: caps.advancedEq,
+    supportsDiracOpteo: caps.dirac !== null,
+    supportsUltraBass: caps.ultraBass !== null,
+    supportsSpatialAudio: caps.spatialModes.length > 0,
+    supportsDualConnection: caps.dualConnection,
+    supportsSmartDial: caps.smartDial,
+    ...(highResCodec ? { highResCodec } : {}),
+  };
+}
+
+export const DEVICE_CATALOG: DeviceCatalogEntry[] = CATALOG_BASE.map(withDerivedFlags);

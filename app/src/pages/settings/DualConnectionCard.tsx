@@ -3,17 +3,16 @@ import { Laptop, Smartphone, Link2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { StatusChip } from '@/components/StatusChip';
-import { useDeviceStore, getCurrentDevice } from '@/lib/deviceStore';
+import { useDeviceStore, useCapabilities } from '@/lib/deviceStore';
 
 export function DualConnectionCard() {
   const { t } = useTranslation();
-  const selectedModelId = useDeviceStore((s) => s.selectedModelId);
+  const caps = useCapabilities();
   const dualConnection = useDeviceStore((s) => s.dualConnection);
   const setDualConnection = useDeviceStore((s) => s.setDualConnection);
   const connectionMode = useDeviceStore((s) => s.connectionMode);
 
-  const device = getCurrentDevice(selectedModelId);
-  if (!device.supportsDualConnection) return null;
+  if (!caps.dualConnection) return null;
 
   return (
     <Card>

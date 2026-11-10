@@ -2,16 +2,17 @@ import { useTranslation } from 'react-i18next';
 import { RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useDeviceStore } from '@/lib/deviceStore';
+import { useDeviceStore, useCapabilities } from '@/lib/deviceStore';
 
 export function ParametricEqCard() {
   const { t } = useTranslation();
+  const caps = useCapabilities();
   const eqPreset = useDeviceStore((s) => s.eqPreset);
   const parametricBands = useDeviceStore((s) => s.parametricBands);
   const updateParametricBand = useDeviceStore((s) => s.updateParametricBand);
   const resetParametricBands = useDeviceStore((s) => s.resetParametricBands);
 
-  if (eqPreset !== 'advanced') return null;
+  if (eqPreset !== 'advanced' || !caps.advancedEq || caps.dirac?.replacesEq) return null;
 
   // Compute SVG polyline points for the 8-band frequency curve
   const points = parametricBands

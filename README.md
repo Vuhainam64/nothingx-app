@@ -8,24 +8,25 @@
 
 | Nhóm | Chức năng |
 |---|---|
-| Thiết bị | Tự quét tai nghe Nothing/CMF đã ghép đôi trên Windows, nhận diện model & màu (FastPair Model ID + tên), đọc pin L/R/hộp sạc (tự cập nhật mỗi 60 giây), firmware, serial |
-| Chống ồn | ANC / Xuyên âm / Tắt, mức Cao / Trung bình / Thấp / Thích ứng, ANC cá nhân hoá, kiểm tra độ vừa tai (kết quả từng bên tai) |
-| Âm thanh | EQ preset, EQ tuỳ chỉnh 3 dải, Parametric EQ 8 dải (bộ lọc peaking), Dirac Opteo, Ultra Bass 1–5, Spatial Audio (Cố định / Head tracking / Concert / Cinema / Game), Hi-Res LDAC / LHDC |
-| Điều khiển | Cử chỉ bóp từng bên tai (2 lần, 3 lần, giữ, 2 lần + giữ) — chỉ cho chọn các hành động tai nghe chấp nhận; Smart Dial trên hộp sạc CMF Buds Pro 2 |
-| Cài đặt | Phát hiện đeo tai, chế độ độ trễ thấp, kết nối kép, tìm tai nghe (phát chuông L/R) |
+| Thiết bị | Tự quét tai nghe Nothing/CMF đã ghép đôi trên Windows (không nhận nhầm tai nghe hãng khác), nhận diện model & màu, đọc pin L/R/hộp sạc — cập nhật tức thì qua thông báo `E001` từ tai nghe, firmware, serial, tự phát hiện mất kết nối |
+| Chống ồn | ANC / Xuyên âm / Tắt và các mức theo model, đồng bộ khi đổi chế độ bằng cử chỉ trên tai (thông báo `E003`), ANC cá nhân hoá, kiểm tra độ vừa tai (kết quả từng bên tai: vừa / chưa kín / chưa đeo…) |
+| Âm thanh | EQ preset, EQ tuỳ chỉnh 3 dải, Parametric EQ 8 dải (bộ lọc peaking), các chế độ Dirac (Opteo, Pop, Rock, Electronic, Vocals, Classical, Custom…) trên model CMF, Ultra Bass 1–5, Spatial Audio, Hi-Res LDAC / LHDC |
+| Điều khiển | Cử chỉ cho từng tai, nút/núm trên headphone & neckband, Smart Dial trên hộp sạc (CMF Buds Pro 2, Clip Pro) — danh sách hành động lấy đúng theo model (phát/tạm dừng, chuyển bài, trợ lý ảo, âm lượng, các kiểu chuyển ANC, độ trễ thấp, Spatial, EQ, Ultra Bass…) |
+| Cài đặt | Phát hiện đeo tai, chế độ độ trễ thấp, kết nối kép, tìm tai nghe (phát chuông L/R, hoặc cả thiết bị với headphone) |
 | Đồng bộ | Khi kết nối, app đọc lại trạng thái từ tai nghe (ANC, EQ, Spatial, codec, Ultra Bass, cử chỉ, các công tắc) để giao diện khớp với thiết bị |
 | Cửa sổ | Chế độ đầy đủ, widget Mini góc taskbar (luôn ở trên), ẩn xuống system tray, menu tray đổi ANC nhanh, tooltip tray hiển thị pin |
 | Giao diện | 4 phong cách (Premium, Liquid, Aurora, Shapes) × sáng/tối, đa ngôn ngữ **Tiếng Việt / English / 简体中文** |
 
 Mọi opcode và định dạng payload đều được đối chiếu với mã Dart đã dịch ngược (blutter) của Nothing X 3.10.2 — xem phần [Giao thức](#giao-thức-tóm-tắt). Một số chi tiết vẫn là suy luận và được ghi rõ bên dưới.
 
-Khi không có tai nghe kết nối, app chạy ở **chế độ demo** — có thể chọn bất kỳ model nào trong danh mục (13 model) để xem trước tính năng.
+Khi không có tai nghe kết nối, app chạy ở **chế độ demo** — có thể chọn bất kỳ model nào trong danh mục (24 model) để xem trước tính năng.
 
 ### Thiết bị được nhận diện
 
-Nothing Headphone (1) · Nothing Ear · Ear (a) · Ear (open) · Ear (2) · Ear (1) · Ear (stick) · CMF Buds Pro 2 · CMF Buds 2 Plus · CMF Buds · CMF Buds Pro · CMF Neckband Pro · CMF Headphone Pro
+**Nothing:** Ear (1) · Ear (stick) · Ear (2) · Ear (a) · Ear · Ear (open) · Ear (3) · Ear (3a) · Headphone (1) · Headphone (1) Pro · Headphone (a)
+**CMF:** Buds · Buds Pro · Buds Pro 2 · Buds 2 · Buds 2a · Buds 2 Plus · Buds Neo · Neckband Pro · Headphone Pro · Clip Pro
 
-Mức hỗ trợ thực tế phụ thuộc vào từng model và firmware; app mới được kiểm chứng giới hạn trên phần cứng thật.
+Model được nhận diện bằng lệnh hỏi trực tiếp tai nghe (`C01C` model, `C00C` màu), sau đó tới Fast Pair Model ID, cuối cùng là tên Bluetooth. Tính năng hiển thị cho từng model được đọc từ **cấu hình gốc của app Nothing X** (`ear_white_list.json`, kèm dải firmware), nên app chỉ hiện và chỉ gửi những lệnh model đó hỗ trợ. App mới được kiểm chứng giới hạn trên phần cứng thật.
 
 ## Yêu cầu
 
@@ -72,7 +73,8 @@ app/
 ├── src/                      # Frontend React 19 + TypeScript
 │   ├── lib/
 │   │   ├── deviceStore.ts    # Zustand store: trạng thái thiết bị, gửi lệnh, poll pin, tray, lưu cài đặt
-│   │   ├── deviceCatalog.ts  # Danh mục 13 model: màu, ảnh, cờ tính năng
+│   │   ├── deviceCatalog.ts      # Danh mục 24 model: tên, màu, ảnh
+│   │   ├── deviceCapabilities.ts # Tính năng theo model/firmware, đọc từ cấu hình gốc ear_white_list.json
 │   │   ├── nothingCommands.ts    # Opcode + bộ mã hoá/giải mã payload (EQ, Spatial, cử chỉ…)
 │   │   ├── bluetoothProtocol.ts  # Kiểu dữ liệu, mapping ANC, parse payload pin
 │   │   └── theme.tsx         # Sáng/tối + 4 phong cách giao diện
@@ -84,7 +86,10 @@ app/
 ├── src-tauri/                # Backend Rust (Tauri v2)
 │   └── src/
 │       ├── protocol.rs       # Mã hoá/giải mã frame Nothing, CRC16, tách frame
-│       ├── bluetooth.rs      # Quét thiết bị, RFCOMM, cache kết nối, FastPair
+│       ├── bluetooth.rs      # Quét thiết bị, RFCOMM, kết nối + luồng đọc nền, thông báo, FastPair
+│       ├── router.rs         # Ghép phản hồi với yêu cầu theo lệnh + FSN
+│       ├── device_match.rs   # Lọc thiết bị Nothing/CMF, đoán model theo tên
+│       ├── fast_pair_table.rs # Bảng Fast Pair ID → model/màu (sinh từ devices_info_list.json)
 │       └── lib.rs            # Tray, sự kiện cửa sổ, đăng ký command
 ├── public/assets/            # Ảnh thiết bị, icon, font, âm thanh, config
 └── scripts/                  # free-port.mjs, tray-companion.ps1 (tray cho chế độ trình duyệt)
@@ -108,6 +113,7 @@ Phản hồi của lệnh `cmd` mang mã `cmd & 0x7FFF`: truy vấn `0xC0xx` →
 
 | Tính năng | Đọc | Ghi | Payload ghi |
 |---|---|---|---|
+| Model / màu | `C01C` / `C00C` | — | — · phản hồi: mã model dạng hex (vd. `B171`), mã màu 2 chữ số |
 | Pin | `C007` (+ thông báo `E001`) | — | — · phản hồi `[n, (id, mức\|0x80 khi sạc)…]`, id `2`=L `3`=R `4`=hộp |
 | Firmware / serial | `C042` / `C006` | — | — |
 | ANC | `C01E [03]` (+ `E003`) | `F00F` | `[01, mode, 00]` — `1`–`4` mức ANC, `5` tắt, `7` xuyên âm |
@@ -127,14 +133,16 @@ Phản hồi của lệnh `cmd` mang mã `cmd & 0x7FFF`: truy vấn `0xC0xx` →
 | Kết nối kép | `C027` | `F01A` | `[bật]` |
 | Tìm tai nghe | — | `F002` | `[bên, bật]` — `2` L, `3` R, `6` headphone/neckband |
 
-Mã cử chỉ: thiết bị `2` L, `3` R, `4` hộp sạc, `6` headphone/neckband · cử chỉ `2` bóp 2 lần, `3` bóp 3 lần, `7` giữ, `9` bóp 2 lần + giữ, `10` xoay núm · hành động `1` không làm gì, `2` phát/tạm dừng, `8` bài trước, `9` bài sau, `11` trợ lý ảo, `18`/`19` tăng/giảm âm lượng, `22` ANC ↔ xuyên âm, `23` âm lượng (xoay núm).
+Mã cử chỉ: thiết bị `2` L, `3` R, `4` hộp sạc, `6` headphone/neckband · cử chỉ `1` 1 lần, `2` 2 lần, `3` 3 lần, `7` giữ, `9` 2 lần + giữ, `10` xoay núm · hành động `1` không làm gì, `2` phát/tạm dừng, `3` nghe/cúp máy, `8` bài trước, `9` bài sau, `10` ANC → xuyên âm → tắt, `11` trợ lý ảo, `17` độ trễ thấp, `18`/`19` tăng/giảm âm lượng, `20` ANC ↔ tắt, `21` xuyên âm ↔ tắt, `22` ANC ↔ xuyên âm, `23` âm lượng (xoay núm), `27` Spatial, `34` EQ, `35` Ultra Bass, `36` tăng treble.
 
 Model ID được đọc qua kênh Google Fast Pair message stream (`df21fe2c-2515-4fdb-8886-f12c4d67927c`, group `0x03` code `0x01`).
 
-**Còn là suy luận / chưa xác minh trên phần cứng:**
-- Ultra Bass có hai cách mã hoá (`mức × 2` và `mức × 5`); app gốc chọn theo cấu hình cloud của từng model. App này dùng `× 2`.
-- Định dạng phản hồi của truy vấn độ trễ thấp (`C041`).
-- Smart Dial trên Headphone (1), Headphone Pro, Neckband Pro do firmware cố định nên không chỉnh được.
+**Lưu ý & điểm chưa xác minh trên phần cứng:**
+- Spatial Audio: app gốc chỉ gửi `F052` tới model tự xử lý Spatial (vd. Headphone Pro, Headphone (a)); với các model khác Spatial do điện thoại/PC xử lý nên app chỉ lưu lựa chọn.
+- Windows không dùng codec LDAC/LHDC; công tắc Hi-Res chỉ có tác dụng khi tai nghe kết nối với thiết bị hỗ trợ.
+- Model dùng Dirac (phần lớn CMF) chọn preset bằng `F01D`, không có EQ preset thường.
+- Ultra Bass có hai cách mã hoá (`mức × 2` / `mức × 5`), chọn theo cấu hình của từng model.
+- Định dạng phản hồi của truy vấn độ trễ thấp (`C041`) và việc tai nghe có lặp lại FSN trong phản hồi hay không (app tự thích nghi cả hai trường hợp).
 - Giảm ồn gió không có trong app gốc nên không được hỗ trợ.
 
 Log/capture từ thiết bị thật để xác minh rất được hoan nghênh.

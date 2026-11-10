@@ -2,23 +2,33 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/PageContainer';
 import { PageHeader } from '@/components/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
-import { useDeviceStore, getCurrentDevice } from '@/lib/deviceStore';
-import { supportsPinchGestures } from '@/lib/nothingCommands';
-import { EarbudGestureCard } from './EarbudGestureCard';
-import { SmartDialCard } from './SmartDialCard';
+import { useCapabilities } from '@/lib/deviceStore';
+import type { GestureDeviceId, GestureSlot } from '@/lib/deviceCapabilities';
+import { GestureGroupCard } from './GestureGroupCard';
+
+const DEVICE_ORDER: GestureDeviceId[] = [2, 3, 4, 6, 7];
 
 export function ControlsPage() {
   const { t } = useTranslation();
-  const selectedModelId = useDeviceStore((s) => s.selectedModelId);
-  const device = getCurrentDevice(selectedModelId);
+  const caps = useCapabilities();
+
+  const groups: { device: GestureDeviceId; slots: GestureSlot[] }[] = DEVICE_ORDER.map(
+    (device) => ({
+      device,
+      slots: caps.gestureSlots
+        .filter((s) => s.device === device)
+        .sort((a, b) => a.button - b.button || a.gesture - b.gesture),
+    }),
+  ).filter((g) => g.slots.length > 0);
 
   return (
     <PageContainer className="space-y-6">
       <PageHeader title={t('controls.title')} subtitle={t('controls.subtitle')} />
-      {supportsPinchGestures(device) ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <EarbudGestureCard side="left" />
-          <EarbudGestureCard side="right" />
+      {groups.length > 0 ? (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {groups.map((g) => (
+            <GestureGroupCard key={g.device} device={g.device} slots={g.slots} />
+          ))}
         </div>
       ) : (
         <Card>
@@ -27,7 +37,6 @@ export function ControlsPage() {
           </CardContent>
         </Card>
       )}
-      <SmartDialCard />
     </PageContainer>
   );
 }

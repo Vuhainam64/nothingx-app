@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StatusChip } from '@/components/StatusChip';
 import {
   useDeviceStore,
+  useCapabilities,
   getCurrentDevice,
   getCurrentColor,
 } from '@/lib/deviceStore';
@@ -19,11 +20,13 @@ export function BatteryCards() {
   const firmwareVersion = useDeviceStore((s) => s.firmwareVersion);
   const serialNumber = useDeviceStore((s) => s.serialNumber);
 
+  const caps = useCapabilities();
   const device = getCurrentDevice(selectedModelId);
   const activeColor = getCurrentColor(device, selectedColorSku);
+  const connected = connectionMode === 'connected';
 
-  // Over-ear Headphone / Neckband layout (e.g. Nothing Headphone (1) B170)
-  if (device.formFactor !== 'tws') {
+  // Single-battery layout (headphones / neckband, e.g. Nothing Headphone (1) B170)
+  if (caps.batteryLayout === 'single') {
     const level = battery.left;
     const charging = battery.leftCharging;
     const tone =
@@ -46,9 +49,9 @@ export function BatteryCards() {
                   {charging && <BatteryCharging className="size-3" />}
                   {charging
                     ? t('overview.charging')
-                    : connectionMode === 'connected'
+                    : connected
                       ? t('overview.inUse')
-                      : t('overview.inEar')}
+                      : t('overview.idle')}
                 </StatusChip>
               </div>
 
@@ -88,8 +91,8 @@ export function BatteryCards() {
               </span>
               <BluetoothConnected
                 className={
-                  connectionMode === 'connected'
-                    ? 'size-4 text-emerald-400'
+                  connected
+                    ? 'size-4 text-emerald-600 dark:text-emerald-400'
                     : 'size-4 text-muted-foreground'
                 }
               />
@@ -97,19 +100,19 @@ export function BatteryCards() {
 
             <div className="space-y-1.5 font-mono text-xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">MAC:</span>
+                <span className="text-muted-foreground">{t('overview.macLabel')}</span>
                 <span className="text-foreground">
                   {activeMacAddress ?? '—'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Firmware:</span>
+                <span className="text-muted-foreground">{t('overview.firmwareLabel')}</span>
                 <span className="text-foreground">
                   {firmwareVersion ? `v${firmwareVersion}` : '—'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Serial:</span>
+                <span className="text-muted-foreground">{t('overview.serialLabel')}</span>
                 <span className="truncate pl-2 text-foreground">{serialNumber ?? '—'}</span>
               </div>
             </div>
@@ -120,29 +123,31 @@ export function BatteryCards() {
   }
 
   // TWS Earbuds (Left + Right + Charging Case) with Real Product Photos
+  const budStatus = (charging: boolean) =>
+    charging ? t('overview.charging') : connected ? t('overview.inEar') : t('overview.idle');
   const items = [
     {
       id: 'left',
       label: t('overview.leftEarbud'),
-      badge: 'L',
+      badge: t('common.leftShort'),
       level: battery.left,
       charging: battery.leftCharging,
-      sub: t('overview.inEar'),
+      sub: budStatus(battery.leftCharging),
       image: activeColor.leftImage,
     },
     {
       id: 'right',
       label: t('overview.rightEarbud'),
-      badge: 'R',
+      badge: t('common.rightShort'),
       level: battery.right,
       charging: battery.rightCharging,
-      sub: t('overview.inEar'),
+      sub: budStatus(battery.rightCharging),
       image: activeColor.rightImage,
     },
     {
       id: 'case',
       label: t('overview.chargingCase'),
-      badge: 'CASE',
+      badge: t('common.caseShort'),
       level: battery.caseLevel,
       charging: battery.caseCharging,
       sub: battery.caseCharging ? t('overview.charging') : t('overview.discharging'),

@@ -21,22 +21,28 @@ export function TitleBar() {
 
   useEffect(() => {
     if (!desktop) return;
+    let cancelled = false;
     let unlisten: (() => void) | undefined;
 
     (async () => {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         const appWindow = getCurrentWindow();
-        setMaximized(await appWindow.isMaximized());
-        unlisten = await appWindow.onResized(async () => {
-          setMaximized(await appWindow.isMaximized());
+        const isMax = await appWindow.isMaximized();
+        if (!cancelled) setMaximized(isMax);
+        const un = await appWindow.onResized(async () => {
+          const max = await appWindow.isMaximized();
+          if (!cancelled) setMaximized(max);
         });
+        if (cancelled) un();
+        else unlisten = un;
       } catch {
         // Running inside standard browser window
       }
     })();
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [desktop]);
@@ -98,7 +104,7 @@ export function TitleBar() {
           data-tauri-drag-region
           className="text-[10px] text-muted-foreground/60 font-mono hidden sm:inline"
         >
-          AUDIO SUITE
+          {t('app.titleSuffix')}
         </span>
       </div>
 

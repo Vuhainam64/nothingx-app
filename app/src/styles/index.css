@@ -460,6 +460,13 @@
   --font-display-family: "GeistMono", ui-monospace, monospace;
   --font-display-tracking: 0;
 }
+/* Ndot57/GeistMono have no CJK glyphs: in Chinese use one system CJK-safe stack so Han characters and
+   Latin/digits in display text don't mix the dot-matrix face with a fallback font. */
+:root:lang(zh) {
+  --font-display-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+    "Source Han Sans SC", system-ui, sans-serif;
+  --font-display-tracking: 0;
+}
 body {
   font-family: var(--font-sans);
 }

@@ -4,9 +4,20 @@
  * Every opcode and byte layout here was verified against the Nothing X 3.10.2 Android app
  * (blutter-disassembled Flutter AOT, `flutter_nothing_link/.../ear/ear_helper.dart` and `cmd/*`).
  * Replies to a request `cmd` come back as `cmd & 0x7FFF` (query 0xC0xx → 0x40xx, set 0xF0xx → ack 0x70xx).
+ *
+ * This module is pure (no store / catalog access): per-model behaviour is passed in by the caller
+ * from `DeviceCapabilities`.
  */
-import type { DeviceCatalogEntry } from './deviceCatalog';
 import type { EqPreset, ParametricBand } from './bluetoothProtocol';
+import {
+  DIRAC_MODE_BYTE,
+  GESTURE_OPS,
+  type DiracMode,
+  type GestureOpName,
+  type GestureSlot,
+  type SimpleEqShape,
+  type FindTarget,
+} from './deviceCapabilities';
 
 export const OP = {
   // EQ
@@ -31,13 +42,15 @@ export const OP = {
   // Noise control
   GET_ANC: 0xc01e, // [0x03]
   SET_ANC: 0xf00f, // [0x01, mode, 0x00]
+  NOTIFY_ANC: 0xe003, // same TLV payload as the 0x401E reply
   GET_PERSONAL_ANC: 0xc020, // → [switch, calibration]
   SET_PERSONAL_ANC: 0xf011, // [switch, calibration]
   FIT_TEST: 0xf014, // [1] start / [0] stop; ack 0x7014 [status]
+  FIT_TEST_ACK: 0x7014,
   NOTIFY_FIT_RESULT: 0xe00d, // [left, right]
   // Sound
   GET_BASS_BOOST: 0xc04e, // → [enable, raw]
-  SET_BASS_BOOST: 0xf051, // [enable, level*2] (V1)
+  SET_BASS_BOOST: 0xf051, // [enable, level*2] (V1) / [enable, level*5] (V2)
   // Settings
   GET_IN_EAR: 0xc00e, // → payload[2] == 1
   SET_IN_EAR: 0xf004, // [0x01, 0x01, enable]
@@ -51,22 +64,79 @@ export const OP = {
   NOTIFY_BATTERY: 0xe001,
 } as const;
 
-/* ------------------------------------------------------------------ simple toggles */
+export type HwCommand = { command: number; payload: number[] };
 
-/**
- * Ultra Bass. The app has two encodings: V1 `level*2` and V2 `level*5` (chosen by cloud config
- * `privateCode == 247 || ultraBassType == 3`, models not identifiable offline). V1 is used.
- */
-export function encodeBassBoost(enabled: boolean, level: number): number[] {
-  return [enabled ? 0x01 : 0x00, clampInt(level, 1, 5) * 2];
+/* ------------------------------------------------------------------ helpers */
+
+function clampInt(v: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, Math.round(v)));
 }
 
-export function decodeBassBoost(payload: number[]): { enabled: boolean; level: number } | null {
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+function f32le(value: number): number[] {
+  const buf = new DataView(new ArrayBuffer(4));
+  buf.setFloat32(0, value, true);
+  return [buf.getUint8(0), buf.getUint8(1), buf.getUint8(2), buf.getUint8(3)];
+}
+
+function readF32le(bytes: number[], offset: number): number {
+  const buf = new DataView(new ArrayBuffer(4));
+  for (let i = 0; i < 4; i++) buf.setUint8(i, bytes[offset + i] ?? 0);
+  return buf.getFloat32(0, true);
+}
+
+/** Round a float read off the wire to 0.1 (f32 noise like 2.4999998 → 2.5). */
+const round1 = (v: number) => Math.round(v * 10) / 10;
+
+/** Compare dotted firmware versions ("1.0.1.46"). Missing/blank sorts as oldest. */
+export function compareFirmware(a: string | null | undefined, b: string): number {
+  if (!a || !a.trim()) return -1;
+  const pa = a.trim().split('.').map((x) => parseInt(x, 10) || 0);
+  const pb = b.split('.').map((x) => parseInt(x, 10) || 0);
+  const n = Math.max(pa.length, pb.length);
+  for (let i = 0; i < n; i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+/** Firmware 1.0.1.46+ uses the "new" total-gain rule for both simple and advanced EQ. */
+function isNewGainFirmware(firmware: string | null | undefined): boolean {
+  return compareFirmware(firmware, '1.0.1.46') >= 0;
+}
+
+/* ------------------------------------------------------------------ simple toggles */
+
+export type UltraBassEncoding = 'v1' | 'v2';
+
+/**
+ * Ultra Bass 0xF051 `[enable, raw]`. V1 raw = level*2, V2 raw = level*5
+ * (`useBassBoostV2` = privateCode 247 || ultraBassType 3; resolved by the capabilities).
+ */
+export function encodeBassBoost(
+  enabled: boolean,
+  level: number,
+  encoding: UltraBassEncoding = 'v1',
+  maxLevel = 5,
+): number[] {
+  const lvl = clampInt(level, 1, Math.max(1, maxLevel));
+  return [enabled ? 0x01 : 0x00, lvl * (encoding === 'v2' ? 5 : 2)];
+}
+
+/** 0x404E reply. V1: level = raw/2, 0 → 5 (app default). V2: level = raw/5. */
+export function decodeBassBoost(
+  payload: number[],
+  encoding: UltraBassEncoding = 'v1',
+  maxLevel = 5,
+): { enabled: boolean; level: number } | null {
   if (payload.length < 2) return null;
   const raw = payload[1];
-  // V1 raw = level*2 (0 means 5); a V2 reply (multiple of 5 above 10) is folded back too.
-  let level = raw === 0 ? 5 : raw > 10 && raw % 5 === 0 ? raw / 5 : Math.round(raw / 2);
-  level = clampInt(level, 1, 5);
+  let level: number;
+  if (encoding === 'v2') level = Math.round(raw / 5);
+  else level = raw === 0 ? 5 : Math.round(raw / 2);
+  level = clampInt(level, 1, Math.max(1, maxLevel));
   return { enabled: payload[0] === 0x01, level };
 }
 
@@ -104,15 +174,24 @@ export function decodePersonalAnc(payload: number[]): { enabled: boolean; calibr
   return { enabled: payload[0] === 0x01, calibration: payload.length > 1 ? payload[1] : null };
 }
 
-export function encodeFindDevice(side: 'left' | 'right' | 'body', on: boolean): number[] {
-  const id = side === 'left' ? 0x02 : side === 'right' ? 0x03 : 0x06;
-  return [id, on ? 0x01 : 0x00];
+/** Find 0xF002 `[side, on]`: 2 = left, 3 = right, 6 = single body (headphone / neckband). */
+export const FIND_TARGET_ID: Record<FindTarget, number> = { left: 0x02, right: 0x03, body: 0x06 };
+
+export function encodeFindDevice(target: FindTarget, on: boolean): number[] {
+  return [FIND_TARGET_ID[target], on ? 0x01 : 0x00];
 }
 
+/* ------------------------------------------------------------------ ear-tip fit test */
+
 export type FitCode = 'good' | 'poor' | 'notWorn' | 'inCall' | 'busy';
+/** Per-ear result codes (objs.txt): 0 success, 1 fail, 2 unWear, 3 calling, 4 repeatedOperationError. */
 const FIT_CODES: FitCode[] = ['good', 'poor', 'notWorn', 'inCall', 'busy'];
 
-/** 0xE00D notification `[left, right]`. */
+export function encodeFitTest(start: boolean): number[] {
+  return [start ? 0x01 : 0x00];
+}
+
+/** 0xE00D notification `[left, right]`. Unknown codes → null. */
 export function decodeFitResult(payload: number[]): { left: FitCode; right: FitCode } | null {
   if (payload.length < 2) return null;
   const l = FIT_CODES[payload[0]];
@@ -120,40 +199,21 @@ export function decodeFitResult(payload: number[]): { left: FitCode; right: FitC
   return l && r ? { left: l, right: r } : null;
 }
 
-function clampInt(v: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, Math.round(v)));
-}
+export type FitStartStatus = 'ok' | 'anotherTesting' | 'other' | 'personalSoundTesting';
 
-/* ------------------------------------------------------------------ little-endian helpers */
-
-function f32le(value: number): number[] {
-  const buf = new DataView(new ArrayBuffer(4));
-  buf.setFloat32(0, value, true);
-  return [buf.getUint8(0), buf.getUint8(1), buf.getUint8(2), buf.getUint8(3)];
-}
-
-function readF32le(bytes: number[], offset: number): number {
-  const buf = new DataView(new ArrayBuffer(4));
-  for (let i = 0; i < 4; i++) buf.setUint8(i, bytes[offset + i] ?? 0);
-  return buf.getFloat32(0, true);
-}
-
-/** Compare dotted firmware versions ("1.0.1.46"). Missing/blank sorts as oldest. */
-export function compareFirmware(a: string | null | undefined, b: string): number {
-  if (!a || !a.trim()) return -1;
-  const pa = a.trim().split('.').map((x) => parseInt(x, 10) || 0);
-  const pb = b.split('.').map((x) => parseInt(x, 10) || 0);
-  const n = Math.max(pa.length, pb.length);
-  for (let i = 0; i < n; i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d !== 0) return d < 0 ? -1 : 1;
+/** 0x7014 ack `[status]`: 0 success, 1 another test running, 3 personal-sound test, else other. */
+export function decodeFitStartAck(payload: number[]): FitStartStatus | null {
+  if (!payload.length) return null;
+  switch (payload[0]) {
+    case 0:
+      return 'ok';
+    case 1:
+      return 'anotherTesting';
+    case 3:
+      return 'personalSoundTesting';
+    default:
+      return 'other';
   }
-  return 0;
-}
-
-/** Firmware 1.0.1.46+ uses the "new" total-gain rule for both simple and advanced EQ. */
-function isNewGainFirmware(firmware: string | null | undefined): boolean {
-  return compareFirmware(firmware, '1.0.1.46') >= 0;
 }
 
 /* ------------------------------------------------------------------ EQ mode */
@@ -171,26 +231,43 @@ export const EQ_MODE = {
   advance: 100,
 } as const;
 
-export type HwCommand = { command: number; payload: number[] };
+export interface EqModeOptions {
+  /** Model has 8-band advanced EQ (0xF04F is only ever sent when true). */
+  advancedEq: boolean;
+  /** Dirac mode to send with 0xF01D when the target is `diracOpteo`. */
+  diracMode?: DiracMode;
+  /** Wire byte for `voice` (1, or 6 when the device reported newVoice). */
+  voiceByte?: number;
+}
 
 /**
- * Command sequence to select a preset, mirroring `setSimpleMode` in ear_eq_repository.dart:
- * advanced → F04F [01]; anything else → (F04F [00] if advanced was on) then F010 [mode];
- * Dirac Opteo devices use F01D instead of F010.
+ * Command sequence to switch the device to `preset`, mirroring `setSimpleMode` in
+ * ear_eq_repository.dart:
+ * - advanced → F04F [01] (no F010);
+ * - Dirac → (F04F [00] if advanced may be on) then F01D [diracMode];
+ * - anything else → (F04F [00] if advanced may be on) then F010 [mode].
+ * `applied` is the last preset actually applied on the device (null = unknown, treated as
+ * "advanced may be on"). Does not upload band values (callers prepend F041/F050).
  */
-export function eqPresetCommands(preset: EqPreset, previous: EqPreset): HwCommand[] {
+export function eqPresetCommands(
+  preset: EqPreset,
+  applied: EqPreset | null,
+  opts: EqModeOptions,
+): HwCommand[] {
   if (preset === 'advanced') {
-    return [{ command: OP.SET_ADVANCE_EQ_MODE, payload: [0x01] }];
+    return opts.advancedEq ? [{ command: OP.SET_ADVANCE_EQ_MODE, payload: [0x01] }] : [];
   }
   const out: HwCommand[] = [];
-  if (previous === 'advanced') out.push({ command: OP.SET_ADVANCE_EQ_MODE, payload: [0x00] });
+  if (opts.advancedEq && (applied === 'advanced' || applied === null)) {
+    out.push({ command: OP.SET_ADVANCE_EQ_MODE, payload: [0x00] });
+  }
   if (preset === 'diracOpteo') {
-    out.push({ command: OP.SET_DIRAC_EQ, payload: [0x00] }); // DiracMode.opteo = 0
+    out.push({ command: OP.SET_DIRAC_EQ, payload: encodeDiracMode(opts.diracMode ?? 'opteo') });
     return out;
   }
   const mode: Record<Exclude<EqPreset, 'advanced' | 'diracOpteo'>, number> = {
     balanced: EQ_MODE.balanced,
-    voice: EQ_MODE.voice,
+    voice: opts.voiceByte ?? EQ_MODE.voice,
     moreTreble: EQ_MODE.moreTreble,
     moreBass: EQ_MODE.moreBass,
     custom: EQ_MODE.simpleCustomEq,
@@ -199,7 +276,10 @@ export function eqPresetCommands(preset: EqPreset, previous: EqPreset): HwComman
   return out;
 }
 
-/** 0xC01F reply → preset. 0x64 (advance) is reported by 0xC04C separately on most firmware. */
+/**
+ * 0xC01F reply byte → preset. newVoice (6) maps to `voice` (callers remember the byte so
+ * re-selecting sends 6); newInstrument (7) and 0xFF (invalid) → null.
+ */
 export function eqPresetFromMode(mode: number | null | undefined): EqPreset | null {
   switch (mode) {
     case EQ_MODE.balanced:
@@ -222,20 +302,49 @@ export function eqPresetFromMode(mode: number | null | undefined): EqPreset | nu
   }
 }
 
+/** 0xC04C reply: advanced EQ on when payload[0] == 1. */
+export function decodeAdvancedEqMode(payload: number[]): boolean | null {
+  return payload.length ? payload[0] === 0x01 : null;
+}
+
+/* ------------------------------------------------------------------ Dirac Opteo (0xF01D) */
+
+export function encodeDiracMode(mode: DiracMode): number[] {
+  return [DIRAC_MODE_BYTE[mode]];
+}
+
+/** 0xC050 reply `[diracMode]` → mode (null when out of range). */
+export function decodeDiracMode(payload: number[]): DiracMode | null {
+  if (!payload.length) return null;
+  for (const [mode, byte] of Object.entries(DIRAC_MODE_BYTE) as [DiracMode, number][]) {
+    if (byte === payload[0]) return mode;
+  }
+  return null;
+}
+
 /* ------------------------------------------------------------------ simple 3-band custom EQ (0xF041) */
 
 export type SimpleEqBands = { bass: number; mid: number; treble: number };
 
-// Record order and fixed filter parameters from nt_ear_simple_custom_equaliser.dart buildSetPayload.
-const SIMPLE_EQ_LAYOUT = [
-  { key: 'mid' as const, type: 1, freq: 980, q: 0.7 },
-  { key: 'treble' as const, type: 2, freq: 6900, q: 1.0 },
-  { key: 'bass' as const, type: 0, freq: 140, q: 0.8 },
-];
+/** Fixed filter parameters hardcoded in nt_ear_simple_custom_equaliser.dart buildSetPayload. */
+export const DEFAULT_SIMPLE_EQ_SHAPE: SimpleEqShape = {
+  freqLow: 140,
+  qLow: 0.8,
+  freqPeak: 980,
+  qPeak: 0.7,
+  freqHigh: 6900,
+  qHigh: 1.0,
+};
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-
-export function encodeSimpleCustomEq(bands: SimpleEqBands, firmware: string | null): number[] {
+/**
+ * 44-byte payload: `[3][f32 total]` then records in the app's order
+ * mid (type 1, peak), treble (type 2, high), bass (type 0, low): `u8 type | f32 gain | f32 freq | f32 Q`.
+ */
+export function encodeSimpleCustomEq(
+  bands: SimpleEqBands,
+  firmware: string | null,
+  shape: SimpleEqShape = DEFAULT_SIMPLE_EQ_SHAPE,
+): number[] {
   const g = {
     bass: clamp(bands.bass, -6, 6),
     mid: clamp(bands.mid, -6, 6),
@@ -243,28 +352,37 @@ export function encodeSimpleCustomEq(bands: SimpleEqBands, firmware: string | nu
   };
   const maxGain = Math.max(g.bass, g.mid, g.treble);
   const total = isNewGainFirmware(firmware) ? maxGain : maxGain > 0 ? -maxGain : 0;
-
-  const out = [SIMPLE_EQ_LAYOUT.length, ...f32le(total)];
-  for (const rec of SIMPLE_EQ_LAYOUT) {
-    out.push(rec.type, ...f32le(g[rec.key]), ...f32le(rec.freq), ...f32le(rec.q));
+  const records = [
+    { type: 1, gain: g.mid, freq: shape.freqPeak, q: shape.qPeak },
+    { type: 2, gain: g.treble, freq: shape.freqHigh, q: shape.qHigh },
+    { type: 0, gain: g.bass, freq: shape.freqLow, q: shape.qLow },
+  ];
+  const out = [records.length, ...f32le(total)];
+  for (const rec of records) {
+    out.push(rec.type, ...f32le(rec.gain), ...f32le(rec.freq), ...f32le(rec.q));
   }
   return out; // 1 + 4 + 3*13 = 44 bytes
 }
 
-/** 0xC044 reply → gains (records read by type byte, not position). */
+/** 0xC044 reply → gains (records read by type byte, not position; 0.1 dB precision). */
 export function decodeSimpleCustomEq(payload: number[]): SimpleEqBands | null {
   if (payload.length < 5) return null;
   const count = payload[0];
   const out: SimpleEqBands = { bass: 0, mid: 0, treble: 0 };
+  let any = false;
   for (let i = 0; i < count; i++) {
     const at = 5 + i * 13;
     if (at + 13 > payload.length) break;
-    const gain = Math.round(readF32le(payload, at + 1));
+    const raw = readF32le(payload, at + 1);
+    if (!Number.isFinite(raw)) continue;
+    const gain = clamp(round1(raw), -6, 6);
     if (payload[at] === 0) out.bass = gain;
     else if (payload[at] === 1) out.mid = gain;
     else if (payload[at] === 2) out.treble = gain;
+    else continue;
+    any = true;
   }
-  return out;
+  return any ? out : null;
 }
 
 /* ------------------------------------------------------------------ advanced / parametric EQ (0xF050) */
@@ -272,9 +390,10 @@ export function decodeSimpleCustomEq(payload: number[]): SimpleEqBands | null {
 /** RBJ peaking biquad magnitude (dB) at `f`, fs = 44100, freq & gain rounded like the app. */
 function peakingResponseDb(f: number, band: ParametricBand): number {
   const fs = 44100;
-  const f0 = Math.round(band.freq);
+  // `_peakingMatrixFromBand`: fc clamped to 20..20000, Q ≤ 0 replaced with 0.1.
+  const f0 = clamp(Math.round(band.freq), 20, 20000);
   const gain = Math.round(band.gain);
-  const q = band.q > 0 ? band.q : 1;
+  const q = band.q > 0 ? band.q : 0.1;
   const A = Math.pow(10, gain / 40);
   const w0 = (2 * Math.PI * f0) / fs;
   const alpha = Math.sin(w0) / (2 * q);
@@ -305,12 +424,16 @@ export function parametricPeakDb(bands: ParametricBand[]): number {
   return peak;
 }
 
+/** Max bands in the main advanced set (provider caps at 8 points). */
+export const ADVANCED_EQ_MAX_BANDS = 8;
+
 /**
- * The device stores peaking filters only (type byte is always 1 in the app), so the UI's
- * shelf types cannot be represented on the wire and are sent as peaking bands.
+ * 0xF050 `[00][n][f32 total][n × (u8 type=1 | f32 gain | f32 freq | f32 Q)]`.
+ * The device stores peaking filters only (type byte is always 1 in the app), so UI shelf types
+ * are sent as peaking bands. Total gain follows the firmware rule (`totalGainForWaveDispatch`).
  */
 export function encodeAdvancedEq(bands: ParametricBand[], firmware: string | null): number[] {
-  const list = bands.slice(0, 8);
+  const list = bands.slice(0, ADVANCED_EQ_MAX_BANDS);
   const peak = parametricPeakDb(list);
   const total = isNewGainFirmware(firmware) ? Math.min(0, 6 - peak) : -(Math.trunc(peak) + 1);
   const out = [0x00, list.length, ...f32le(total)];
@@ -318,6 +441,35 @@ export function encodeAdvancedEq(bands: ParametricBand[], firmware: string | nul
     out.push(0x01, ...f32le(b.gain), ...f32le(b.freq), ...f32le(b.q > 0 ? b.q : 1));
   }
   return out; // 6 + 13n bytes (110 for 8 bands)
+}
+
+/** 0xC04D query payload: profile index 0 (both app callers pass 0). */
+export const ADVANCED_EQ_QUERY_PAYLOAD = [0x00];
+
+/**
+ * 0xC04D reply → bands. `[profile][count][f32 total]` then 13-byte records. A count of 0 means
+ * "factory default" → null (keep local bands). Q 0 is read as 1.0 like the app.
+ */
+export function decodeAdvancedEq(payload: number[]): ParametricBand[] | null {
+  if (payload.length < 6) return null;
+  const count = payload[1];
+  if (count === 0) return null;
+  const out: ParametricBand[] = [];
+  for (let i = 0; i < count && out.length < ADVANCED_EQ_MAX_BANDS; i++) {
+    const at = 6 + i * 13;
+    if (at + 13 > payload.length) break;
+    const gain = readF32le(payload, at + 1);
+    const freq = readF32le(payload, at + 5);
+    const q = readF32le(payload, at + 9);
+    if (!Number.isFinite(gain) || !Number.isFinite(freq) || freq <= 0) continue;
+    out.push({
+      freq: Math.round(freq),
+      gain: round1(gain),
+      q: Number.isFinite(q) && q > 0 ? Math.round(q * 100) / 100 : 1,
+      type: 'peak',
+    });
+  }
+  return out.length >= 2 ? out : null;
 }
 
 /* ------------------------------------------------------------------ spatial audio (0xF052) */
@@ -350,9 +502,23 @@ export function decodeSpatialAudio(payload: number[]): SpatialMode {
 
 /* ------------------------------------------------------------------ high-res codec (0xF01C) */
 
-export function encodeHighQualityAudio(enabled: boolean, device: DeviceCatalogEntry): number[] {
-  if (!enabled || !device.highResCodec) return [0x00]; // AAC
-  return [device.highResCodec === 'LDAC' ? 0x02 : 0x01];
+export type HighResCodecName = 'ldac' | 'lhdc';
+
+/**
+ * Codec the model uses for "Hi-Res on". The official app has no documented preference when a
+ * model supports both, so LDAC is preferred; null when the model has no hi-res codec.
+ */
+export function preferredHighResCodec(codecs: readonly HighResCodecName[]): HighResCodecName | null {
+  if (codecs.includes('ldac')) return 'ldac';
+  if (codecs.includes('lhdc')) return 'lhdc';
+  return null;
+}
+
+/** `[0]` AAC (off), `[1]` LHDC, `[2]` LDAC. */
+export function encodeHighQualityAudio(enabled: boolean, codecs: readonly HighResCodecName[]): number[] {
+  const codec = enabled ? preferredHighResCodec(codecs) : null;
+  if (!codec) return [0x00];
+  return [codec === 'ldac' ? 0x02 : 0x01];
 }
 
 export function decodeHighQualityAudio(payload: number[]): boolean {
@@ -360,134 +526,67 @@ export function decodeHighQualityAudio(payload: number[]): boolean {
   return v === 0x01 || v === 0x02;
 }
 
-/* ------------------------------------------------------------------ gestures (0xF003) */
+/* ------------------------------------------------------------------ gestures (0xF003 / 0xC018) */
 
-export type GestureKey = 'doublePinch' | 'triplePinch' | 'pinchHold' | 'doublePinchHold';
-export type GestureActionName =
-  | 'playPause'
-  | 'nextTrack'
-  | 'prevTrack'
-  | 'noiseControl'
-  | 'voiceAssistant'
-  | 'volumeUp'
-  | 'volumeDown'
-  | 'noAction';
+/** Stable slot key used in store state (matches `GestureSlot.id`). */
+export function gestureSlotId(device: number, button: number, gesture: number): string {
+  return `${device}-${button}-${gesture}`;
+}
 
-export const GESTURE_DEVICE = { left: 0x02, right: 0x03, case: 0x04, body: 0x06 } as const;
-const GESTURE_TYPE: Record<GestureKey, number> = {
-  doublePinch: 2,
-  triplePinch: 3,
-  pinchHold: 7,
-  doublePinchHold: 9,
-};
-const BUTTON_MAIN = 0x01;
+// Built lazily so this module never touches deviceCapabilities values at import time.
+let opNameByCode: Map<number, GestureOpName> | null = null;
 
-export const ACTION_OP: Record<GestureActionName, number> = {
-  noAction: 1,
-  playPause: 2,
-  prevTrack: 8,
-  nextTrack: 9,
-  noiseControl: 22, // ANC ↔ Transparency (app default for hold); 10 = ANC/Transparency/Off cycle
-  voiceAssistant: 11,
-  volumeUp: 18,
-  volumeDown: 19,
-};
-
-const OP_ACTION = new Map<number, GestureActionName>([
-  [1, 'noAction'],
-  [2, 'playPause'],
-  [8, 'prevTrack'],
-  [9, 'nextTrack'],
-  [10, 'noiseControl'],
-  [20, 'noiseControl'],
-  [21, 'noiseControl'],
-  [22, 'noiseControl'],
-  [11, 'voiceAssistant'],
-  [18, 'volumeUp'],
-  [19, 'volumeDown'],
-]);
-
-/**
- * Actions the app offers per pinch gesture on TWS buds (ear_white_list.json). Single pinch is fixed
- * to play/pause on the buds, so play/pause is not assignable to these gestures.
- */
-export const PINCH_ALLOWED_ACTIONS: Record<GestureKey, GestureActionName[]> = {
-  doublePinch: ['nextTrack', 'prevTrack', 'voiceAssistant'],
-  triplePinch: ['nextTrack', 'prevTrack', 'voiceAssistant'],
-  pinchHold: ['noiseControl', 'volumeUp', 'volumeDown', 'voiceAssistant', 'noAction'],
-  doublePinchHold: ['noiseControl', 'volumeUp', 'volumeDown', 'voiceAssistant', 'noAction'],
-};
-
-export function supportsPinchGestures(device: DeviceCatalogEntry): boolean {
-  return device.formFactor === 'tws';
+/** Operation byte → name (exact; 10/20/21/22 stay distinct). Unknown codes → null. */
+export function gestureOpFromCode(code: number): GestureOpName | null {
+  opNameByCode ??= new Map(
+    (Object.entries(GESTURE_OPS) as [GestureOpName, number][]).map(([name, code]) => [code, name]),
+  );
+  return opNameByCode.get(code) ?? null;
 }
 
 /** One entry per write, like the app's setGesture: `[1, device, button, gesture, op]`. */
-export function encodePinchGesture(
-  side: 'left' | 'right',
-  gesture: GestureKey,
-  action: GestureActionName,
+export function encodeGesture(
+  slot: Pick<GestureSlot, 'device' | 'button' | 'gesture'>,
+  op: GestureOpName,
 ): number[] {
-  return [
-    0x01,
-    side === 'left' ? GESTURE_DEVICE.left : GESTURE_DEVICE.right,
-    BUTTON_MAIN,
-    GESTURE_TYPE[gesture],
-    ACTION_OP[action],
-  ];
+  return [0x01, slot.device, slot.button, slot.gesture, GESTURE_OPS[op]];
 }
 
-export type DecodedGestures = {
-  left: Partial<Record<GestureKey, GestureActionName>>;
-  right: Partial<Record<GestureKey, GestureActionName>>;
-  dialRotateOn: boolean | null;
-  dialPress: GestureActionName | null;
-};
+export interface GestureEntry {
+  device: number;
+  button: number;
+  gesture: number;
+  op: number;
+}
 
 /** 0xC018 reply: `[count, (device, button, gesture, op)*]`. */
-export function decodeGestures(payload: number[]): DecodedGestures {
-  const out: DecodedGestures = { left: {}, right: {}, dialRotateOn: null, dialPress: null };
+export function decodeGestureEntries(payload: number[]): GestureEntry[] {
+  const out: GestureEntry[] = [];
   const count = payload[0] ?? 0;
-  const byType = new Map(Object.entries(GESTURE_TYPE).map(([k, v]) => [v, k as GestureKey]));
   for (let i = 0; i < count; i++) {
     const at = 1 + i * 4;
     if (at + 4 > payload.length) break;
-    const [dev, btn, gest, op] = payload.slice(at, at + 4);
-    const action = OP_ACTION.get(op);
-    if (btn === BUTTON_MAIN && (dev === GESTURE_DEVICE.left || dev === GESTURE_DEVICE.right)) {
-      const key = byType.get(gest);
-      if (key && action) out[dev === GESTURE_DEVICE.left ? 'left' : 'right'][key] = action;
-    } else if (dev === GESTURE_DEVICE.case && btn === BUTTON_MAIN) {
-      if (gest === 10) out.dialRotateOn = op === 23;
-      else if (gest === 1 && action) out.dialPress = action;
-    }
+    const [device, button, gesture, op] = payload.slice(at, at + 4);
+    out.push({ device, button, gesture, op });
   }
   return out;
 }
 
-/* ------------------------------------------------------------------ Smart Dial */
-
 /**
- * Only the CMF Buds Pro 2 case dial (device 4, button 1) is writable. On Headphone (1),
- * Headphone Pro and Neckband Pro the dial/roller is fixed by firmware (volume + play/pause).
+ * Decode a 0xC018 reply into `{ slotId: op }` for the given slots only. Ops not known to
+ * GESTURE_OPS are skipped; known ops are kept exactly as reported (even if outside `allowed`).
  */
-export function smartDialWritable(device: DeviceCatalogEntry): boolean {
-  return device.modelId === 'B172';
-}
-
-export const DIAL_PRESS_ALLOWED: GestureActionName[] = [
-  'playPause',
-  'nextTrack',
-  'prevTrack',
-  'voiceAssistant',
-  'noAction',
-];
-
-/** Smart Dial "enabled" = rotate mapped to volume (op 23); off = op 1. */
-export function encodeSmartDialRotate(enabled: boolean): number[] {
-  return [0x01, GESTURE_DEVICE.case, BUTTON_MAIN, 10, enabled ? 23 : 1];
-}
-
-export function encodeSmartDialPress(action: GestureActionName): number[] {
-  return [0x01, GESTURE_DEVICE.case, BUTTON_MAIN, 1, ACTION_OP[action]];
+export function decodeGestures(
+  payload: number[],
+  slots: readonly GestureSlot[],
+): Record<string, GestureOpName> {
+  const ids = new Set(slots.map((s) => s.id));
+  const out: Record<string, GestureOpName> = {};
+  for (const e of decodeGestureEntries(payload)) {
+    const id = gestureSlotId(e.device, e.button, e.gesture);
+    if (!ids.has(id)) continue;
+    const name = gestureOpFromCode(e.op);
+    if (name) out[id] = name;
+  }
+  return out;
 }

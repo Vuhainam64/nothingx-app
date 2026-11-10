@@ -5,7 +5,7 @@ import { APP_NAME, APP_VERSION } from '@/lib/appMeta';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { NothingMark } from '@/components/NothingMark';
-import { useDeviceStore } from '@/lib/deviceStore';
+import { useDeviceStore, useCapabilities } from '@/lib/deviceStore';
 import { SidebarNav } from './SidebarNav';
 
 interface DashboardSidebarProps {
@@ -16,6 +16,16 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps) {
   const { t } = useTranslation();
   const battery = useDeviceStore((s) => s.battery);
+  const caps = useCapabilities();
+  const single = caps.batteryLayout === 'single';
+  const cells = single
+    ? [{ key: 'main', label: t('overview.batteryShort'), value: battery.left, accent: false }]
+    : [
+        { key: 'l', label: t('common.leftShort'), value: battery.left, accent: false },
+        { key: 'r', label: t('common.rightShort'), value: battery.right, accent: true },
+        { key: 'case', label: t('common.caseShort'), value: battery.caseLevel, accent: false },
+      ];
+  const charging = single ? battery.leftCharging : battery.caseCharging;
 
   return (
     <aside
@@ -57,21 +67,26 @@ export function DashboardSidebar({ collapsed, onToggle }: DashboardSidebarProps)
         <div className="mx-2.5 mb-2 p-2.5 rounded-lg border border-border/70 bg-background/50 space-y-1.5">
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span className="font-medium text-foreground/85">{t('overview.batteryStatus')}</span>
-            {battery.caseCharging && <BatteryCharging className="size-3.5 text-emerald-500" />}
+            {charging && (
+              <BatteryCharging className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+            )}
           </div>
-          <div className="grid grid-cols-3 gap-1.5 text-center font-mono">
-            <div className="rounded bg-muted/60 py-1 px-1">
-              <div className="text-[10px] text-muted-foreground">L</div>
-              <div className="text-xs font-semibold tabular-nums">{battery.left}%</div>
-            </div>
-            <div className="rounded bg-muted/60 py-1 px-1">
-              <div className="text-[10px] text-primary font-bold">R</div>
-              <div className="text-xs font-semibold tabular-nums">{battery.right}%</div>
-            </div>
-            <div className="rounded bg-muted/60 py-1 px-1">
-              <div className="text-[10px] text-muted-foreground">CASE</div>
-              <div className="text-xs font-semibold tabular-nums">{battery.caseLevel}%</div>
-            </div>
+          <div
+            className={cn('grid gap-1.5 text-center font-mono', single ? 'grid-cols-1' : 'grid-cols-3')}
+          >
+            {cells.map((c) => (
+              <div key={c.key} className="rounded bg-muted/60 py-1 px-1">
+                <div
+                  className={cn(
+                    'text-[10px]',
+                    c.accent ? 'text-primary font-bold' : 'text-muted-foreground',
+                  )}
+                >
+                  {c.label}
+                </div>
+                <div className="text-xs font-semibold tabular-nums">{c.value}%</div>
+              </div>
+            ))}
           </div>
         </div>
       )}

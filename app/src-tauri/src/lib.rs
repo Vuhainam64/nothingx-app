@@ -1,5 +1,8 @@
 pub mod bluetooth;
+pub mod device_match;
+pub mod fast_pair_table;
 pub mod protocol;
+pub mod router;
 
 use bluetooth::{
     open_windows_bluetooth_settings, scan_bluetooth_devices, send_and_await_notification,
@@ -41,8 +44,17 @@ struct TrayLabels {
 }
 
 #[tauri::command]
-fn build_nothing_packet(command: u16, fsn: u8, payload: Vec<u8>) -> NothingFrame {
+fn build_nothing_packet(command: u16, fsn: u8, payload: Vec<u8>) -> Result<NothingFrame, String> {
     NothingFrame::encode(command, fsn, &payload)
+}
+
+/// Brings the main window back: restore from minimized, show, focus.
+fn restore_main_window(app: &AppHandle) -> Option<tauri::WebviewWindow> {
+    let win = app.get_webview_window("main")?;
+    let _ = win.unminimize();
+    let _ = win.show();
+    let _ = win.set_focus();
+    Some(win)
 }
 
 #[tauri::command]
@@ -87,8 +99,14 @@ fn update_tray(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Must be the first plugin: a second launch focuses the running instance instead
+        // of starting another process that would fight over the RFCOMM channel.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            let _ = restore_main_window(app);
+        }))
         .manage(CloseToTray(AtomicBool::new(true)))
         .setup(|app| {
+            bluetooth::init(app.handle().clone());
             let open_mini = MenuItem::with_id(
                 app,
                 "open_mini",
@@ -134,16 +152,12 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open_mini" => {
-                        if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
+                        if let Some(win) = restore_main_window(app) {
                             let _ = win.emit("tray:open-mini", ());
                         }
                     }
                     "open_full" => {
-                        if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
+                        if let Some(win) = restore_main_window(app) {
                             let _ = win.emit("tray:open-full", ());
                         }
                     }
@@ -168,11 +182,9 @@ pub fn run() {
                         ..
                     } = event
                     {
-                        let app = tray.app_handle();
-                        if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
-                            let _ = win.emit("tray:open-mini", ());
+                        // The frontend restores the window in its current view mode.
+                        if let Some(win) = restore_main_window(tray.app_handle()) {
+                            let _ = win.emit("tray:restore", ());
                         }
                     }
                 });

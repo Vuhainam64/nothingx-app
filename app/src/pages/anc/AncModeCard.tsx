@@ -3,12 +3,12 @@ import { ShieldAlert, Ear, PowerOff, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Segmented } from '@/components/Segmented';
-import { useDeviceStore, getCurrentDevice } from '@/lib/deviceStore';
+import { useDeviceStore, useCapabilities } from '@/lib/deviceStore';
 import type { AncMode, AncLevel } from '@/lib/bluetoothProtocol';
 
 export function AncModeCard() {
   const { t } = useTranslation();
-  const selectedModelId = useDeviceStore((s) => s.selectedModelId);
+  const caps = useCapabilities();
   const ancMode = useDeviceStore((s) => s.ancMode);
   const ancLevel = useDeviceStore((s) => s.ancLevel);
   const personalAnc = useDeviceStore((s) => s.personalAnc);
@@ -16,9 +16,7 @@ export function AncModeCard() {
   const setAncLevel = useDeviceStore((s) => s.setAncLevel);
   const setPersonalAnc = useDeviceStore((s) => s.setPersonalAnc);
 
-  const device = getCurrentDevice(selectedModelId);
-
-  const modes: { id: AncMode; icon: typeof ShieldAlert; label: string; desc: string }[] = [
+  const allModes: { id: AncMode; icon: typeof ShieldAlert; label: string; desc: string }[] = [
     {
       id: 'anc',
       icon: ShieldAlert,
@@ -38,13 +36,22 @@ export function AncModeCard() {
       desc: t('anc.modes.offDesc'),
     },
   ];
+  const modes = allModes.filter(
+    (m) => (m.id === 'anc' && caps.anc) || (m.id === 'transparency' && caps.transparency) || m.id === 'off',
+  );
 
-  const levelOptions: { value: AncLevel; label: string }[] = [
-    { value: 'high', label: t('anc.levels.high') },
-    { value: 'mid', label: t('anc.levels.mid') },
-    { value: 'low', label: t('anc.levels.low') },
-    { value: 'adaptive', label: t('anc.levels.adaptive') },
-  ];
+  const levelOptions: { value: AncLevel; label: string }[] = caps.ancLevels.map((level) => ({
+    value: level,
+    label: t(`anc.levels.${level}`),
+  }));
+
+  if (!caps.anc && !caps.transparency) {
+    return (
+      <Card>
+        <CardContent className="p-5 text-sm text-muted-foreground">{t('anc.unsupported')}</CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -55,7 +62,7 @@ export function AncModeCard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* 3 Mode Selector Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className={`grid grid-cols-1 gap-3 ${modes.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             {modes.map((m) => {
               const Icon = m.icon;
               const active = ancMode === m.id;
@@ -64,6 +71,7 @@ export function AncModeCard() {
                   key={m.id}
                   type="button"
                   onClick={() => setAncMode(m.id)}
+                  aria-pressed={active}
                   className={`text-left p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 ${
                     active
                       ? 'border-primary bg-primary/10 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_30%,transparent)]'
@@ -94,13 +102,15 @@ export function AncModeCard() {
           </div>
 
           {/* Intensity Selector when ANC is active */}
-          {ancMode === 'anc' && (
+          {ancMode === 'anc' && caps.anc && levelOptions.length > 0 && (
             <div className="pt-2 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium">{t('anc.intensityTitle')}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {t(`anc.levels.${ancLevel}Desc`)}
-                </div>
+                {caps.ancLevels.includes(ancLevel) && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {t(`anc.levels.${ancLevel}Desc`)}
+                  </div>
+                )}
               </div>
               <Segmented value={ancLevel} onChange={setAncLevel} options={levelOptions} />
             </div>
@@ -109,8 +119,8 @@ export function AncModeCard() {
       </Card>
 
       {/* Personalised ANC */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {device.supportsPersonalAnc && (
+      {caps.personalAnc && caps.anc && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardContent className="p-5 flex items-center justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -127,9 +137,8 @@ export function AncModeCard() {
               <Switch checked={personalAnc} onCheckedChange={setPersonalAnc} />
             </CardContent>
           </Card>
-        )}
-
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,21 +19,30 @@ export function DashboardLayout() {
 
   useEffect(() => {
     if (!isDesktop()) return;
-    let unlistenMini: (() => void) | undefined;
-    let unlistenFull: (() => void) | undefined;
-    let unlistenAnc: (() => void) | undefined;
+    let cancelled = false;
+    const unlisteners: (() => void)[] = [];
 
     (async () => {
       try {
         const { listen } = await import('@tauri-apps/api/event');
-        unlistenMini = await listen('tray:open-mini', () => {
+        const add = async <T,>(event: string, handler: (payload: T) => void) => {
+          const un = await listen<T>(event, (ev) => handler(ev.payload));
+          // Effect cleaned up while `listen` was pending (StrictMode / fast remount): drop it now.
+          if (cancelled) un();
+          else unlisteners.push(un);
+        };
+        // Tray icon left click: restore in the current view mode.
+        await add('tray:restore', () => {
+          void restoreFromSystemTray();
+        });
+        await add('tray:open-mini', () => {
           void restoreFromSystemTray('mini');
         });
-        unlistenFull = await listen('tray:open-full', () => {
+        await add('tray:open-full', () => {
           void restoreFromSystemTray('full');
         });
-        unlistenAnc = await listen<AncMode>('tray:anc-mode', (ev) => {
-          setAncMode(ev.payload);
+        await add<AncMode>('tray:anc-mode', (mode) => {
+          setAncMode(mode);
         });
       } catch {
         // ignore outside Tauri
@@ -41,9 +50,8 @@ export function DashboardLayout() {
     })();
 
     return () => {
-      unlistenMini?.();
-      unlistenFull?.();
-      unlistenAnc?.();
+      cancelled = true;
+      for (const un of unlisteners.splice(0)) un();
     };
   }, [restoreFromSystemTray, setAncMode]);
 

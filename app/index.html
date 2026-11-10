@@ -1,9 +1,26 @@
 <!doctype html>
-<html lang="vi" data-theme="dark" data-visual-style="premium">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NOTHING X — PC DESKTOP</title>
+    <script>
+      // Apply the stored theme/style before first paint (avoids a light flash in dark mode).
+      (function () {
+        var root = document.documentElement;
+        var theme = 'dark';
+        var style = 'premium';
+        try {
+          var t = localStorage.getItem('nothingx.theme');
+          if (t === 'light' || t === 'dark') theme = t;
+          var s = localStorage.getItem('nothingx.style');
+          if (s === 'premium' || s === 'liquid' || s === 'aurora' || s === 'shapes') style = s;
+        } catch (e) {}
+        if (theme === 'dark') root.classList.add('dark');
+        root.style.colorScheme = theme;
+        root.dataset.style = style;
+      })();
+    </script>
   </head>
   <body class="overflow-hidden antialiased">
     <div id="root"></div>

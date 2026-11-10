@@ -1,7 +1,7 @@
 {
   "name": "nothingx-desktop",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nothing X Desktop Companion App for PC",
   "type": "module",
   "scripts": {

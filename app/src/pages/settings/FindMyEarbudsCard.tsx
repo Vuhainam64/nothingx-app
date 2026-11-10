@@ -2,17 +2,29 @@ import { useTranslation } from 'react-i18next';
 import { Volume2, Square } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useDeviceStore, getCurrentDevice } from '@/lib/deviceStore';
+import { useDeviceStore, useCapabilities, getCurrentDevice } from '@/lib/deviceStore';
+import type { FindTarget } from '@/lib/deviceCapabilities';
 
 export function FindMyEarbudsCard() {
   const { t } = useTranslation();
+  const caps = useCapabilities();
   const selectedModelId = useDeviceStore((s) => s.selectedModelId);
-  const ringingLeft = useDeviceStore((s) => s.ringingLeft);
-  const ringingRight = useDeviceStore((s) => s.ringingRight);
-  const toggleFindMyEarbud = useDeviceStore((s) => s.toggleFindMyEarbud);
+  const ringing = useDeviceStore((s) => s.ringing);
+  const toggleFind = useDeviceStore((s) => s.toggleFind);
 
   const device = getCurrentDevice(selectedModelId);
-  const isRinging = ringingLeft || ringingRight;
+  const targets = caps.findTargets;
+  if (targets.length === 0) return null;
+
+  const isRinging = targets.some((target) => ringing[target]);
+  const single = targets.length === 1;
+
+  const label = (target: FindTarget) =>
+    target === 'left'
+      ? t('settings.ringLeft')
+      : target === 'right'
+        ? t('settings.ringRight')
+        : t('settings.ringDevice');
 
   return (
     <Card>
@@ -20,7 +32,9 @@ export function FindMyEarbudsCard() {
         <div>
           <CardTitle>{t('settings.findEarbuds')}</CardTitle>
           <CardDescription className="mt-1">
-            {t('settings.findEarbudsDesc')}
+            {caps.batteryLayout === 'single'
+              ? t('settings.findDeviceDesc')
+              : t('settings.findEarbudsDesc')}
           </CardDescription>
         </div>
 
@@ -39,42 +53,33 @@ export function FindMyEarbudsCard() {
         </div>
       </CardHeader>
 
-      <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Button
-          variant={ringingLeft ? 'destructive' : 'outline'}
-          onClick={() => toggleFindMyEarbud('left')}
-          className="h-11 justify-between px-4"
-        >
-          <span className="flex items-center gap-2">
-            <span className="rounded bg-muted px-1.5 py-0.5 font-bold text-foreground text-xs">
-              L
-            </span>
-            {ringingLeft ? t('settings.stopRinging') : t('settings.ringLeft')}
-          </span>
-          {ringingLeft ? (
-            <Square className="size-4" />
-          ) : (
-            <Volume2 className="size-4" />
-          )}
-        </Button>
-
-        <Button
-          variant={ringingRight ? 'destructive' : 'outline'}
-          onClick={() => toggleFindMyEarbud('right')}
-          className="h-11 justify-between px-4"
-        >
-          <span className="flex items-center gap-2">
-            <span className="rounded bg-primary/15 px-1.5 py-0.5 font-bold text-primary text-xs">
-              R
-            </span>
-            {ringingRight ? t('settings.stopRinging') : t('settings.ringRight')}
-          </span>
-          {ringingRight ? (
-            <Square className="size-4" />
-          ) : (
-            <Volume2 className="size-4" />
-          )}
-        </Button>
+      <CardContent className={`grid grid-cols-1 gap-3 ${single ? '' : 'sm:grid-cols-2'}`}>
+        {targets.map((target) => {
+          const active = ringing[target];
+          return (
+            <Button
+              key={target}
+              variant={active ? 'destructive' : 'outline'}
+              onClick={() => toggleFind(target)}
+              aria-pressed={active}
+              className="h-11 justify-between px-4"
+            >
+              <span className="flex items-center gap-2">
+                {target !== 'body' && (
+                  <span
+                    className={`rounded px-1.5 py-0.5 font-bold text-xs ${
+                      target === 'left' ? 'bg-muted text-foreground' : 'bg-primary/15 text-primary'
+                    }`}
+                  >
+                    {target === 'left' ? t('common.leftShort') : t('common.rightShort')}
+                  </span>
+                )}
+                {active ? t('settings.stopRinging') : label(target)}
+              </span>
+              {active ? <Square className="size-4" /> : <Volume2 className="size-4" />}
+            </Button>
+          );
+        })}
       </CardContent>
     </Card>
   );

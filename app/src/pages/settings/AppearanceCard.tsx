@@ -15,7 +15,7 @@ import { useTheme, VISUAL_STYLES, type VisualStyle } from '@/lib/theme';
 export function AppearanceCard() {
   const { t, i18n } = useTranslation();
   const { theme, setTheme, style, setStyle } = useTheme();
-  const currentLang = (i18n.language?.slice(0, 2) || 'vi') as LanguageCode;
+  const currentLang = (i18n.language?.slice(0, 2) || 'en') as LanguageCode;
 
   return (
     <Card>
@@ -83,6 +83,7 @@ export function AppearanceCard() {
                   key={vs.id}
                   type="button"
                   onClick={() => setStyle(vs.id as VisualStyle)}
+                  aria-pressed={active}
                   className={`text-left p-3.5 rounded-xl border transition-all ${
                     active
                       ? 'border-primary bg-primary/10 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_30%,transparent)]'

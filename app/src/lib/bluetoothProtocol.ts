@@ -57,14 +57,50 @@ export function ancByte(mode: AncMode, level: AncLevel): number {
   return ANC_LEVEL_BYTES[level] ?? ANC_LEVEL_BYTES.high;
 }
 
-/** Inverse of {@link ancByte}. `level` is null for off/transparency (keep current level). */
+/** Inverse of {@link ancByte} for one mode byte. `level` is null for off/transparency (keep current level). */
 export function ancFromByte(b: number): { mode: AncMode; level: AncLevel | null } | null {
-  if (b === ANC_OFF_BYTE) return { mode: 'off', level: null };
-  if (b === ANC_TRANSPARENCY_BYTE) return { mode: 'transparency', level: null };
+  if (b === 0x00 || b === ANC_OFF_BYTE) return { mode: 'off', level: null };
+  if (b === ANC_TRANSPARENCY_BYTE || b === 0xfe) return { mode: 'transparency', level: null };
   for (const [level, byte] of Object.entries(ANC_LEVEL_BYTES) as [AncLevel, number][]) {
     if (byte === b) return { mode: 'anc', level };
   }
   return null;
+}
+
+function ancLevelFromByte(b: number): AncLevel | null {
+  for (const [level, byte] of Object.entries(ANC_LEVEL_BYTES) as [AncLevel, number][]) {
+    if (byte === b) return level;
+  }
+  return null;
+}
+
+/**
+ * Parse a 0x401E reply / 0xE003 notification: a sequence of 3-byte TLVs `[type, value, x]`
+ * (`NtEarAnc.parser`). type 1 = mode (1-4 ANC + level, 0/5 off, 7/0xFE transparency, others
+ * ignored); type 2 = level only (1-4). Other types are ignored. `mode` / `level` are null when
+ * the payload did not report them. Returns null when nothing usable was found.
+ */
+export function parseAncPayload(
+  payload: ArrayLike<number> | null | undefined,
+): { mode: AncMode | null; level: AncLevel | null } | null {
+  if (!payload || payload.length < 3) return null;
+  let mode: AncMode | null = null;
+  let level: AncLevel | null = null;
+  for (let i = 0; i + 3 <= payload.length; i += 3) {
+    const type = payload[i];
+    const value = payload[i + 1];
+    if (type === 0x01) {
+      const parsed = ancFromByte(value);
+      if (parsed) {
+        mode = parsed.mode;
+        if (parsed.level) level = parsed.level;
+      }
+    } else if (type === 0x02) {
+      const l = ancLevelFromByte(value);
+      if (l) level = l;
+    }
+  }
+  return mode === null && level === null ? null : { mode, level };
 }
 
 /** Frame returned by the Rust `send_bluetooth_command` invoke (serde default field names). */
@@ -90,12 +126,13 @@ export interface ParsedBattery {
 }
 
 /**
- * Parse a 0xC007 battery payload. Mirrors `parse_battery_payload` in src-tauri:
- * payload[0] = count, then `count` pairs of [deviceId, raw]; level = raw & 0x7F,
- * charging = raw & 0x80. Ids: 0x02 left, 0x03 right, 0x04 case, 0x01/0x06 single battery.
+ * Parse a 0x4007 battery reply / 0xE001 notification (`NtEarBattery.parser`):
+ * payload[0] = count (ignored, like the app), then `(id, raw)` pairs walked by payload length;
+ * level = raw & 0x7F, charging = raw & 0x80. Ids: 2 left, 3 right, 4 case, 1/6/7 single battery
+ * (headphone, neckband, speaker); 5 and unknown ids are ignored.
  */
 export function parseBatteryPayload(payload: ArrayLike<number> | null | undefined): ParsedBattery | null {
-  if (!payload || payload.length === 0) return null;
+  if (!payload || payload.length < 3) return null;
   const out: ParsedBattery = {
     left: null,
     leftCharging: false,
@@ -105,11 +142,8 @@ export function parseBatteryPayload(payload: ArrayLike<number> | null | undefine
     caseCharging: false,
     singleBattery: false,
   };
-  const count = payload[0];
-  let idx = 1;
   let any = false;
-  for (let i = 0; i < count; i++) {
-    if (idx + 1 >= payload.length) break;
+  for (let idx = 1; idx + 1 < payload.length; idx += 2) {
     const id = payload[idx];
     const raw = payload[idx + 1];
     const level = raw & 0x7f;
@@ -132,6 +166,7 @@ export function parseBatteryPayload(payload: ArrayLike<number> | null | undefine
         break;
       case 0x01:
       case 0x06:
+      case 0x07:
         out.singleBattery = true;
         out.left = level;
         out.leftCharging = charging;
@@ -144,7 +179,6 @@ export function parseBatteryPayload(payload: ArrayLike<number> | null | undefine
       default:
         break;
     }
-    idx += 2;
   }
   return any ? out : null;
 }

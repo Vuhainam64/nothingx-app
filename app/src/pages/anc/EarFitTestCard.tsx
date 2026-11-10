@@ -1,9 +1,19 @@
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, FlaskConical, Play } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FlaskConical, Play, PhoneCall, Hourglass, CircleSlash } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatusChip } from '@/components/StatusChip';
-import { useDeviceStore } from '@/lib/deviceStore';
+import { StatusChip, type StatusTone } from '@/components/StatusChip';
+import { useDeviceStore, type DeviceStoreState } from '@/lib/deviceStore';
+
+type FitCode = NonNullable<DeviceStoreState['earFitResult']>['left'];
+
+const FIT_VIEW: Record<FitCode, { image: string; tone: StatusTone; icon: typeof CheckCircle2 }> = {
+  good: { image: '/assets/icons/ear/ear_fit_status_yes.png', tone: 'success', icon: CheckCircle2 },
+  poor: { image: '/assets/icons/ear/ear_fit_status_no.png', tone: 'warning', icon: AlertTriangle },
+  notWorn: { image: '/assets/icons/ear/ear_fit_status_error.png', tone: 'neutral', icon: CircleSlash },
+  inCall: { image: '/assets/icons/ear/ear_fit_status_error.png', tone: 'info', icon: PhoneCall },
+  busy: { image: '/assets/icons/ear/ear_fit_status_error.png', tone: 'info', icon: Hourglass },
+};
 
 export function EarFitTestCard() {
   const { t } = useTranslation();
@@ -24,7 +34,7 @@ export function EarFitTestCard() {
           <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-secondary/20 p-2">
             <img
               src="/assets/icons/ear/ear_tip_fit_test.svg"
-              alt="Ear Tip Fit Test"
+              alt={t('anc.earFitTitle')}
               className="max-h-full max-w-full object-contain opacity-90 dark:invert"
             />
           </div>
@@ -58,31 +68,21 @@ export function EarFitTestCard() {
           )}
           <div className="grid grid-cols-1 gap-3 border-t border-border/60 pt-3 sm:grid-cols-2">
             {sides.map((side) => {
-              const good = earFitResult[side.key] === 'good';
+              const code = earFitResult[side.key] as FitCode;
+              const view = FIT_VIEW[code] ?? FIT_VIEW.poor;
+              const Icon = view.icon;
               return (
                 <div
                   key={side.key}
-                  className="flex items-center justify-between rounded-lg bg-muted/30 p-3"
+                  className="flex items-center justify-between gap-3 rounded-lg bg-muted/30 p-3"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={
-                        good
-                          ? '/assets/icons/ear/ear_fit_status_yes.png'
-                          : '/assets/icons/ear/ear_fit_status_no.png'
-                      }
-                      alt=""
-                      className="size-6 object-contain"
-                    />
-                    <span className="font-medium text-xs">{side.label}</span>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <img src={view.image} alt="" className="size-6 shrink-0 object-contain" />
+                    <span className="truncate font-medium text-xs">{side.label}</span>
                   </div>
-                  <StatusChip tone={good ? 'success' : 'warning'}>
-                    {good ? (
-                      <CheckCircle2 className="size-3" />
-                    ) : (
-                      <AlertTriangle className="size-3" />
-                    )}
-                    {good ? t('anc.fitGood') : t('anc.fitPoor')}
+                  <StatusChip tone={view.tone}>
+                    <Icon className="size-3 shrink-0" />
+                    {t(`anc.fitCodes.${code in FIT_VIEW ? code : 'poor'}`)}
                   </StatusChip>
                 </div>
               );
