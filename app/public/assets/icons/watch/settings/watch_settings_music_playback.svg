@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="music-playback">
+<circle id="Ellipse 236845" cx="5" cy="19" r="3" fill="#1C1C1C"/>
+<circle id="Ellipse 236846" cx="19" cy="19" r="3" fill="#1C1C1C"/>
+<rect id="Rectangle 34627973" x="6" y="4" width="2" height="16" rx="1" fill="#1C1C1C"/>
+<rect id="Rectangle 34627974" x="20" y="4" width="2" height="15" rx="1" fill="#1C1C1C"/>
+<path id="Vector 1400" d="M7 5H21" stroke="#1C1C1C" stroke-width="2"/>
+<path id="Vector 1401" d="M7 9H21" stroke="#1C1C1C" stroke-width="2"/>
+</g>
+</svg>

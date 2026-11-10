@@ -1,0 +1,17 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g clip-path="url(#clip0_16111_6346)">
+        <mask id="path-1-inside-1_16111_6346" fill="white">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M24 10C24 8.89543 23.1046 8 22 8C22 6.34315 20.6569 5 19 5L3 5C1.34315 5 -5.87108e-08 6.34315 -1.31134e-07 8L-4.80825e-07 16C-5.53249e-07 17.6569 1.34314 19 3 19L19 19C20.6569 19 22 17.6569 22 16C23.1046 16 24 15.1046 24 14L24 10Z"/>
+        </mask>
+        <path d="M22 8L20 8L20 10L22 10L22 8ZM24 10L26 10L24 10ZM19 5L19 7L19 5ZM3 5L3 3L3 5ZM-1.31134e-07 8L-2 8L-1.31134e-07 8ZM-4.80825e-07 16L2 16L-4.80825e-07 16ZM3 19L3 17L3 19ZM19 19L19 21L19 19ZM22 16L22 14L20 14L20 16L22 16ZM24 14L22 14L24 14ZM22 10L22 10L26 10C26 7.79086 24.2091 6 22 6L22 10ZM19 7C19.5523 7 20 7.44772 20 8L24 8C24 5.23858 21.7614 3 19 3L19 7ZM3 7L19 7L19 3L3 3L3 7ZM2 8C2 7.44771 2.44772 7 3 7L3 3C0.238575 3 -2 5.23858 -2 8L2 8ZM2 16L2 8L-2 8L-2 16L2 16ZM3 17C2.44772 17 2 16.5523 2 16L-2 16C-2 18.7614 0.238574 21 3 21L3 17ZM19 17L3 17L3 21L19 21L19 17ZM20 16C20 16.5523 19.5523 17 19 17L19 21C21.7614 21 24 18.7614 24 16L20 16ZM22 14L22 18C24.2091 18 26 16.2091 26 14L22 14ZM22 10L22 14L26 14L26 10L22 10Z" fill="#F2F2F2" mask="url(#path-1-inside-1_16111_6346)"/>
+        <rect x="4" y="9" width="2" height="6" rx="1" fill="#F2F2F2"/>
+        <rect x="8" y="9" width="2" height="6" rx="1" fill="#F2F2F2"/>
+        <rect x="12" y="9" width="2" height="6" rx="1" fill="#F2F2F2"/>
+        <rect x="16" y="9" width="2" height="6" rx="1" fill="#F2F2F2"/>
+    </g>
+    <defs>
+        <clipPath id="clip0_16111_6346">
+            <rect width="24" height="24" fill="white"/>
+        </clipPath>
+    </defs>
+</svg>

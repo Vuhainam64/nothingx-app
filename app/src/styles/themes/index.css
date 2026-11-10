@@ -1,0 +1,14 @@
+/*
+ * PHONG CÁCH GIAO DIỆN (Cài đặt → Giao diện → Phong cách), `<html data-style="…">`, độc lập với sáng/tối.
+ * Mỗi file tự định nghĩa lại token + bề mặt kính cho CẢ HAI chế độ, mọi selector đều nằm dưới
+ * `:root[data-style='<id>']` — trừ premium (mặc định) còn áp cả khi chưa có `data-style`.
+ * Nạp từ main.tsx SAU index.css và KHÔNG nằm trong @layer nào → thắng utility Tailwind.
+ * Móc ổn định để bám: data-ui (titlebar, sidebar, sidebar-footer, nav-item, nav-indicator, topbar, main,
+ * rail, rail-header, rail-item[data-active], page-header, card, table-card, filter-bar) và data-slot
+ * (button[data-variant][data-size], input, textarea, select-trigger, select-content, dialog, sheet,
+ * overlay, menu, tooltip, tabs-list, tabs-trigger, badge[data-variant]). ĐỪNG bám tổ hợp class tiện ích.
+ */
+@import './premium.css';
+@import './liquid.css';
+@import './aurora.css';
+@import './shapes.css';

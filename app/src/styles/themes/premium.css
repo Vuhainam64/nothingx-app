@@ -1,0 +1,279 @@
+/* ============================================================== PHONG CÁCH MẶC ĐỊNH — NOTHING MINIMAL (ĐỎ & ĐEN CARBON)
+   Tông Đen Carbon sâu kết hợp Đỏ Nothing (#D71921) đặc trưng và mặt kính trong suốt tinh tế.
+   Áp dụng khi <html data-style="premium"> hoặc mặc định khi khởi động. */
+
+/* ------------------------------------------------------------------------------------------ 1. TOKEN — SÁNG */
+:root:is([data-style='premium'], :not([data-style])) {
+  --canvas: oklch(0.945 0.006 260);
+  --spot: oklch(0.55 0.22 27 / 18%);
+  --backdrop: radial-gradient(ellipse 90% 110% at 15% -18%, var(--spot), transparent 72%);
+  --background: oklch(0.985 0.002 260);
+  --foreground: oklch(0.16 0.01 260);
+
+  --sheet: oklch(0.99 0.002 260 / 82%);
+  --sheet-solid: color-mix(in srgb, oklch(0.99 0.002 260) 82%, oklch(0.945 0.006 260));
+  --sheet-sheen: linear-gradient(160deg, oklch(1 0 0 / 24%), oklch(1 0 0 / 0%) 36%);
+  --sheet-edge: oklch(0.2 0.01 260 / 12%);
+  --sheet-highlight: inset 0 1px 0 0 oklch(1 0 0 / 88%);
+  --sheet-shadow: 0 0 0 1px oklch(0.2 0.01 260 / 8%), 0 12px 32px oklch(0.2 0.01 260 / 7%);
+  --sheet-saturate: 150%;
+
+  --card: oklch(0.995 0.002 260);
+  --card-dense: oklch(0.995 0.002 260);
+  --card-foreground: oklch(0.16 0.01 260);
+  --card-glass: oklch(1 0 0 / 86%);
+  --glass-panel: oklch(0.97 0.004 260);
+  --glass-edge: oklch(0.2 0.01 260 / 12%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 100%);
+  --glass-shadow: 0 1px 2px oklch(0.2 0.01 260 / 5%), 0 6px 20px -12px oklch(0.2 0.01 260 / 15%);
+  --glass-blur: 24px;
+  --glass-saturate: 180%;
+  --header-stuck: oklch(0.985 0.003 260 / 78%);
+
+  --popover: oklch(0.985 0.003 260 / 65%);
+  --popover-foreground: oklch(0.16 0.01 260);
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 95%), inset 0 0 0 1px oklch(1 0 0 / 50%);
+  --float-shadow: 0 0 0 1px oklch(0.2 0.01 260 / 9%), 0 8px 24px oklch(0.2 0.01 260 / 14%);
+  --scrim: oklch(0.15 0.01 260 / 24%);
+
+  /* Nothing Crimson Red (#D71921) */
+  --primary: #d71921;
+  --primary-text: #c4121a;
+  --primary-foreground: #ffffff;
+  --primary-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(215, 25, 33, 0.25), 0 6px 16px -4px rgba(215, 25, 33, 0.45);
+  --secondary: oklch(0.25 0.01 260 / 7%);
+  --secondary-foreground: oklch(0.2 0.01 260);
+  --muted: oklch(0.25 0.01 260 / 5%);
+  --muted-foreground: oklch(0.42 0.015 260);
+  --faint-foreground: oklch(0.55 0.01 260);
+  --accent: rgba(215, 25, 33, 0.09);
+  --accent-foreground: oklch(0.16 0.01 260);
+  --destructive: #d71921;
+  --destructive-text: #c4121a;
+  --destructive-foreground: #ffffff;
+  --success: oklch(0.47 0.11 162);
+  --warning: oklch(0.5 0.13 55);
+  --danger: #d71921;
+  --border: oklch(0.2 0.01 260 / 11%);
+  --input: oklch(0.2 0.01 260 / 16%);
+  --field-border: oklch(0.2 0.01 260 / 35%);
+  --ring: #d71921;
+  --scrollbar-thumb: oklch(0.25 0.01 260 / 22%);
+  --scrollbar-thumb-hover: oklch(0.25 0.01 260 / 38%);
+
+  --chip: oklch(1 0 0 / 92%);
+  --control-fill: oklch(1 0 0 / 78%);
+  --control-fill-hover: oklch(0.96 0.005 260 / 95%);
+  --control-border: oklch(0.2 0.01 260 / 16%);
+  --control-lift: inset 0 1px 0 0 oklch(1 0 0 / 100%), 0 1px 2px oklch(0.2 0.01 260 / 8%);
+  --tool-chip: oklch(1 0 0 / 65%);
+  --tool-chip-hover: oklch(1 0 0 / 92%);
+  --tool-chip-edge: inset 0 1px 0 0 oklch(1 0 0 / 90%), 0 0 0 1px oklch(0.2 0.01 260 / 10%);
+  --nav-active: rgba(215, 25, 33, 0.12);
+  --nav-active-ring: 0 0 0 1px rgba(215, 25, 33, 0.28);
+  --row-hover: rgba(215, 25, 33, 0.05);
+  --focus-ring: 0 0 0 2px var(--ring);
+}
+
+/* ------------------------------------------------------------------------------------------ 2. TOKEN — TỐI (NOTHING CARBON BLACK & RED) */
+:root:is([data-style='premium'], :not([data-style])).dark {
+  --canvas: #090a0c;
+  --spot: rgba(215, 25, 33, 0.22);
+  --backdrop: radial-gradient(ellipse 80% 95% at 14% -18%, var(--spot), transparent 70%);
+  --background: #101216;
+  --foreground: #f4f5f7;
+
+  --sheet: rgba(17, 19, 24, 0.86);
+  --sheet-solid: #111318;
+  --sheet-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0) 38%);
+  --sheet-edge: rgba(255, 255, 255, 0.09);
+  --sheet-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+  --sheet-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 14px 36px rgba(0, 0, 0, 0.45);
+
+  --card: #161920;
+  --card-dense: #161920;
+  --card-foreground: #f4f5f7;
+  --card-glass: rgba(25, 28, 35, 0.78);
+  --glass-panel: #12141a;
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px -16px rgba(0, 0, 0, 0.65);
+  --header-stuck: rgba(17, 19, 24, 0.82);
+
+  --popover: rgba(22, 25, 32, 0.72);
+  --popover-foreground: #f4f5f7;
+  --float-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --float-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65), 0 10px 28px rgba(0, 0, 0, 0.5), 0 20px 48px -12px rgba(0, 0, 0, 0.75);
+  --scrim: rgba(5, 6, 8, 0.62);
+
+  /* Nothing Crimson Red (#D71921) */
+  --primary: #d71921;
+  --primary-text: #ff3b43;
+  --primary-foreground: #ffffff;
+  --primary-glow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px -6px rgba(215, 25, 33, 0.58);
+  --secondary: rgba(255, 255, 255, 0.07);
+  --secondary-foreground: #f4f5f7;
+  --muted: rgba(255, 255, 255, 0.045);
+  --muted-foreground: #9ca3af;
+  --faint-foreground: #6b7280;
+  --accent: rgba(215, 25, 33, 0.15);
+  --accent-foreground: #ffffff;
+  --destructive: #d71921;
+  --destructive-text: #ff4d54;
+  --destructive-foreground: #ffffff;
+  --success: oklch(0.78 0.13 162);
+  --warning: oklch(0.82 0.13 80);
+  --danger: #ff4d54;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.14);
+  --field-border: rgba(255, 255, 255, 0.28);
+  --ring: #d71921;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+
+  --chip: rgba(255, 255, 255, 0.08);
+  --control-fill: rgba(255, 255, 255, 0.05);
+  --control-fill-hover: rgba(255, 255, 255, 0.1);
+  --control-border: rgba(255, 255, 255, 0.13);
+  --control-lift: inset 0 1px 0 0 rgba(255, 255, 255, 0.07), 0 1px 2px rgba(0, 0, 0, 0.35);
+  --tool-chip: rgba(255, 255, 255, 0.05);
+  --tool-chip-hover: rgba(255, 255, 255, 0.11);
+  --tool-chip-edge: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --nav-active: rgba(215, 25, 33, 0.16);
+  --nav-active-ring: inset 0 0 0 1px rgba(215, 25, 33, 0.38);
+  --row-hover: rgba(255, 255, 255, 0.045);
+}
+
+/* ------------------------------------------------------------------------------------------ 3. NỀN */
+:root:is([data-style='premium'], :not([data-style])) body {
+  background-color: var(--canvas);
+  background-image: var(--backdrop);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------------------------------------ 4. CHROME */
+:root:is([data-style='premium'], :not([data-style])) :is([data-ui='titlebar'], [data-ui='sidebar'], [data-ui='topbar'], [data-ui='rail']) {
+  background-color: transparent;
+  border-color: transparent;
+}
+:root:is([data-style='premium'], :not([data-style])) :is([data-ui='titlebar'], [data-ui='sidebar'], [data-ui='topbar'], [data-ui='rail'])::before {
+  content: none;
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='rail'] {
+  border-right-color: var(--glass-edge);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='sidebar-footer'] {
+  border-top-color: transparent;
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='titlebar'] {
+  color: var(--muted-foreground);
+}
+
+:root:is([data-style='premium'], :not([data-style])) [data-ui='topbar'] [data-slot='button'][data-size='icon'] {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: var(--tool-chip);
+  box-shadow: var(--tool-chip-edge);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='topbar'] [data-slot='button'][data-size='icon']:is(:hover, [data-state='open']) {
+  background-color: var(--tool-chip-hover);
+}
+
+:root:is([data-style='premium'], :not([data-style])) [data-ui='nav-item'][aria-current='page'] {
+  background-color: var(--nav-active);
+  box-shadow: var(--nav-active-ring);
+}
+
+/* ------------------------------------------------------------------------------------------ 5. TẤM (vùng làm việc) */
+:root:is([data-style='premium'], :not([data-style])) [data-ui='main'] {
+  isolation: isolate;
+  position: relative;
+  margin: 0 10px 10px 0;
+  border: 1px solid var(--sheet-edge);
+  border-radius: 14px;
+  background-color: transparent;
+  box-shadow: var(--sheet-shadow);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='main']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 13px;
+  pointer-events: none;
+  background: var(--sheet-sheen), var(--sheet);
+  -webkit-backdrop-filter: saturate(var(--sheet-saturate));
+  backdrop-filter: saturate(var(--sheet-saturate));
+  box-shadow: var(--sheet-highlight);
+}
+@media (max-width: 767px) {
+  :root:is([data-style='premium'], :not([data-style])) [data-ui='main'] {
+    margin-left: 10px;
+  }
+}
+
+:root:is([data-style='premium'], :not([data-style])) [data-ui='main'] ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='main'] ::-webkit-scrollbar-thumb {
+  border-width: 3px;
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='main'] ::-webkit-scrollbar-track:vertical {
+  margin-block: 10px;
+}
+
+/* ------------------------------------------------------------------------------------------ 6. CARD / BẢNG */
+:root:is([data-style='premium'], :not([data-style])) .glass:not([data-ui='titlebar'], [data-ui='sidebar'], [data-ui='topbar'], [data-ui='rail']) {
+  background-color: var(--card-glass);
+}
+
+:root:is([data-style='premium'], :not([data-style])) [data-ui='page-header'] {
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  animation-name: premium-header-stuck;
+}
+@keyframes premium-header-stuck {
+  to {
+    background-color: var(--header-stuck);
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: var(--glass-highlight), var(--glass-shadow);
+  }
+}
+
+/* ------------------------------------------------------------------------------------------ 7. ĐIỀU KHIỂN + CHỮ */
+:root:is([data-style='premium'], :not([data-style])) [data-slot='button'][data-variant='outline'] {
+  border-color: var(--control-border);
+  background-color: var(--control-fill);
+  box-shadow: var(--control-lift);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-slot='button'][data-variant='outline']:is(:hover, [data-state='open']) {
+  background-color: var(--control-fill-hover);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-slot='button'][data-variant='outline']:focus-visible {
+  box-shadow: var(--focus-ring), var(--control-lift);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='topbar'] [data-slot='button'][data-size='icon']:focus-visible {
+  box-shadow: var(--focus-ring), var(--tool-chip-edge);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-ui='nav-item'][aria-current='page']:focus-visible {
+  box-shadow: var(--focus-ring), var(--nav-active-ring);
+}
+:root:is([data-style='premium'], :not([data-style])) [data-slot='button']:is([data-variant='default'], [data-variant='destructive']):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+:root:is([data-style='premium'], :not([data-style])) [data-slot='button'][data-variant='default']:focus-visible {
+  box-shadow: var(--primary-glow);
+}
+:root:is([data-style='premium'], :not([data-style])) .text-primary {
+  color: var(--primary-text);
+}
+:root:is([data-style='premium'], :not([data-style])) .text-destructive {
+  color: var(--destructive-text);
+}

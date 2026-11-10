@@ -1,0 +1,8 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="world-clock">
+<path id="Ellipse 236810" d="M17 12C17 14.6113 16.3629 16.9271 15.3851 18.5566C14.3955 20.206 13.1676 21 12 21C10.8324 21 9.60451 20.206 8.61485 18.5566C7.63714 16.9271 7 14.6113 7 12C7 9.38866 7.63714 7.07295 8.61485 5.44343C9.60451 3.794 10.8324 3 12 3C13.1676 3 14.3955 3.794 15.3851 5.44343C16.3629 7.07295 17 9.38866 17 12Z" stroke="#1C1C1C" stroke-width="2"/>
+<circle id="Ellipse 236811" cx="12" cy="12" r="9" stroke="#1C1C1C" stroke-width="2"/>
+<rect id="Rectangle 34627909" x="11" y="2" width="2" height="20" rx="1" fill="#1C1C1C"/>
+<rect id="Rectangle 34627910" x="2" y="13" width="2" height="20" rx="1" transform="rotate(-90 2 13)" fill="#1C1C1C"/>
+</g>
+</svg>

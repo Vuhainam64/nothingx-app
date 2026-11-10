@@ -1,0 +1,32 @@
+# Whitelist: only the desktop app is published.
+# Everything at the repo root is ignored except the entries re-included below.
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/app/
+
+# ---- Inside app/: build output, dependencies, local files ----
+node_modules/
+/app/dist/
+/app/src-tauri/target/
+/app/src-tauri/gen/
+
+# Logs & caches
+*.log
+npm-debug.log*
+.vite/
+*.tsbuildinfo
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local env / secrets
+.env
+.env.*
+!.env.example

@@ -1,0 +1,11 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="gesture control">
+<circle id="Ellipse 236678" cx="9.5" cy="1.5" r="1.5" fill="#1C1C1C"/>
+<circle id="Ellipse 236679" cx="1.5" cy="9.5" r="1.5" fill="#1C1C1C"/>
+<path id="Vector 1274" d="M6 1.5V1.5C3.51472 1.5 1.5 3.51472 1.5 6V6.5" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1275" d="M12 14L11.1574 6.83813C11.0677 6.07508 10.421 5.5 9.65264 5.5V5.5C8.76404 5.5 8.06619 6.26117 8.14317 7.14643L8.71388 13.7096C8.79959 14.6953 7.55485 15.1936 6.93677 14.421L5.38343 12.4793C5.14108 12.1763 4.77416 12 4.38621 12V12C3.36623 12 2.75785 13.1368 3.32363 13.9854L6 18L9 22.5" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1276" d="M12 14V11.75C12 10.7835 12.7835 10 13.75 10V10C14.7165 10 15.5 10.7835 15.5 11.75V15" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1277" d="M15.5 16V13.5C15.5 12.6716 16.1716 12 17 12V12C17.8284 12 18.5 12.6716 18.5 13.5V16" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1278" d="M18.5 18V15.5C18.5 14.6716 19.1716 14 20 14V14C20.8284 14 21.5 14.6716 21.5 15.5V23" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+</g>
+</svg>

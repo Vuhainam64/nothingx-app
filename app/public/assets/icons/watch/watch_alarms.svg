@@ -1,0 +1,11 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="alarm">
+<circle id="Ellipse 236788" cx="12" cy="12" r="9" stroke="#1C1C1C" stroke-width="2"/>
+<circle id="Ellipse 236789" cx="12" cy="12" r="2" fill="#1C1C1C"/>
+<path id="Vector 1301" d="M12 6V12L15 15" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<rect id="Rectangle 34627884" x="1.17188" y="4.41406" width="6" height="2" rx="1" transform="rotate(-45 1.17188 4.41406)" fill="#1C1C1C"/>
+<rect id="Rectangle 34627885" x="18.5859" y="0.171875" width="6" height="2" rx="1" transform="rotate(45 18.5859 0.171875)" fill="#1C1C1C"/>
+<path id="Vector 1302" d="M4 21L6 19" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1303" d="M20 21L18 19" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+</g>
+</svg>

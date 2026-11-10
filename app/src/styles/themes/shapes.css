@@ -1,0 +1,368 @@
+/* ============================================================== D · KHỐI MÀU SAU KÍNH (id "shapes")
+   Khối màu ĐẶC (không gradient nào) nằm SAU kính mờ. MỘT sắc chàm-lavender (hue 277, cạnh logo ~283),
+   hai bậc sắc độ. Chỉ có hai khối trong một "cảnh" theo toạ độ cửa sổ:
+     - "mặt trăng": đĩa tròn ở góc trên-trái, vắt qua sidebar và rail nhóm;
+     - "chân trời": hai vòng tròn rất lớn nhô lên từ mép dưới (hai bậc màu).
+   Cảnh chỉ được vẽ BÊN TRONG hai tấm khung (sidebar + rail) — là nền của chính tấm đó với
+   `background-attachment: fixed`, nên hai tấm là hai "ô cửa" nhìn vào CÙNG một cảnh (mặt trăng liền
+   mạch qua khe giữa hai tấm, thu gọn sidebar thì cảnh đứng yên) và mép sắc của khối không bao giờ lộ ra
+   vùng trống hay sau dữ liệu. Lớp kính (`::before`, blur + phủ màu) nằm trên nền đó → khối chỉ được thấy
+   qua kính mờ, đọc như ánh sáng chứ không như mảng sơn.
+
+   TẦNG:  nền phẳng  <  tấm khung nổi (sidebar, rail: kính mờ, được khối màu chiếu sáng)
+                     <  card / bảng (tấm gần đục, viền mảnh + bóng nhẹ)
+                     <  lớp phủ (.glass-float: kính ~50% + blur 12px đè lên nội dung thật)
+   Thanh trên cùng (topbar) và thanh tiêu đề Tauri KHÔNG có tấm: nằm thẳng trên nền. */
+
+/* ------------------------------------------------------------ token · sáng */
+:root[data-style='shapes'] {
+  --radius: 0.75rem; /* sm 8 · md 10 · lg 12 · xl 16 */
+  --canvas: oklch(0.952 0.011 277);
+  --background: oklch(0.985 0.004 277);
+  --foreground: oklch(0.21 0.025 277);
+  --card: oklch(0.995 0.002 277);
+  --card-dense: oklch(0.995 0.002 277);
+  --card-foreground: oklch(0.21 0.025 277);
+  /* lớp phủ: 50% + blur 12px — thấy rõ hàng bảng/avatar mờ phía sau mà chữ vẫn >= 4.5:1 */
+  --popover: oklch(0.995 0.003 277 / 50%);
+  --popover-foreground: oklch(0.21 0.025 277);
+  /* chàm bão hoà + chữ TRẮNG ở cả hai chế độ */
+  --primary: oklch(0.51 0.19 277);
+  --primary-foreground: oklch(1 0 0);
+  --primary-hover: oklch(0.55 0.19 277);
+  /* `text-primary` (link, icon, nhãn version) — sâu hơn nền nút một nấc: chữ 10–12px nằm trên kính
+     50% hoặc trên chính dải `bg-primary/10` vẫn còn dư >= 4.5:1 */
+  --primary-text: oklch(0.47 0.19 277);
+  --secondary: oklch(0.45 0.04 277 / 8%);
+  --secondary-foreground: oklch(0.25 0.025 277);
+  --muted: oklch(0.45 0.04 277 / 6%);
+  /* 0.375: dấu "—" ô trống ([data-ui=empty-cell], `muted-foreground/60`) vẫn >= 3:1 trên tấm bảng — kể cả trên hàng
+     đang chọn (--row-selected), nơi nền sẫm hơn một chút */
+  --muted-foreground: oklch(0.375 0.028 277);
+  --accent: oklch(0.55 0.12 277 / 11%);
+  --accent-foreground: oklch(0.24 0.04 277);
+  --destructive: oklch(0.52 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+  --destructive-solid: oklch(0.52 0.2 25); /* nền nút xoá (chữ trắng) */
+  --destructive-solid-hover: oklch(0.56 0.2 25);
+  --border: oklch(0.42 0.04 277 / 12%);
+  --input: oklch(0.42 0.04 277 / 26%);
+  --field-border: oklch(0.42 0.04 277 / 68%);
+  --ring: oklch(0.55 0.19 277);
+  --scrollbar-thumb: oklch(0.3 0.03 277 / 22%);
+  --scrollbar-thumb-hover: oklch(0.3 0.03 277 / 38%);
+  --success: oklch(0.44 0.1 165);
+  --warning: oklch(0.48 0.13 50);
+  --danger: oklch(0.52 0.2 25);
+  --scrim: oklch(0.3 0.04 277 / 18%);
+  /* hàng bảng đang chọn: nền gốc là primary/15 — với chàm bão hoà ở đây nó kéo dấu "—" xuống 2.96:1 */
+  --row-selected: color-mix(in oklab, var(--primary) 11%, transparent);
+  /* hàng bảng dưới chuột: `hover:bg-muted/50` gốc chỉ 3% — không thấy. Nhạt hơn hàng đang chọn. */
+  --row-hover: oklch(0.55 0.12 277 / 7%);
+
+  /* --- kính --- */
+  --glass-panel: oklch(0.975 0.006 277); /* bg-panel đục (chỗ nào dùng mà không phải tấm khung) */
+  --glass-fill-panel: oklch(0.99 0.004 277 / 64%); /* lớp kính của tấm khung, đè lên khối màu */
+  --panel-blur: 22px;
+  --panel-saturate: 160%;
+  --glass-saturate: 180%; /* lớp phủ + header dính */
+  --glass-blur-strong: 28px; /* header trang dính */
+  --chip: oklch(1 0 0 / 88%);
+  --lens: oklch(1 0 0 / 82%); /* mục đang chọn (nav, rail, tab): một "thấu kính" nổi */
+  --glass-edge: oklch(0.4 0.04 277 / 12%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 100%), inset 0 0 0 1px oklch(1 0 0 / 50%);
+  --panel-highlight: inset 0 1px 0 0 oklch(1 0 0 / 95%), inset 0 0 0 1px oklch(1 0 0 / 40%);
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 100%), inset 0 0 0 1px oklch(1 0 0 / 50%);
+  --glass-shadow: 0 1px 2px oklch(0.3 0.05 277 / 5%), 0 8px 24px -12px oklch(0.3 0.08 277 / 18%);
+  --panel-shadow: 0 1px 2px oklch(0.3 0.05 277 / 6%), 0 18px 40px -22px oklch(0.3 0.08 277 / 30%);
+  --float-shadow: 0 2px 8px oklch(0.3 0.05 277 / 10%), 0 28px 64px -18px oklch(0.25 0.08 277 / 38%);
+  --lens-shadow: 0 1px 2px oklch(0.3 0.05 277 / 10%), 0 4px 10px -6px oklch(0.3 0.08 277 / 28%);
+  --primary-glow: 0 6px 16px -8px oklch(0.51 0.19 277 / 70%);
+
+  /* --- cảnh khối màu (toạ độ CỬA SỔ, gốc = mép trên khung app) ---
+     mặt trăng: tâm (190, 10) r230 · chân trời: tâm (260, đáy + 620) r900 (bậc nhạt) + r790 (bậc đậm).
+     SVG không có gradient/filter: chỉ hình tròn tô đặc; blur là việc của lớp kính. */
+  --shape-moon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='240'%3E%3Ccircle cx='190' cy='10' r='230' fill='%23a2acff'/%3E%3C/svg%3E");
+  --shape-horizon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='290'%3E%3Ccircle cx='260' cy='910' r='900' fill='%23c6cfff'/%3E%3Ccircle cx='260' cy='910' r='790' fill='%23a2acff'/%3E%3C/svg%3E");
+  --frame-top: 0px; /* app Tauri: thanh tiêu đề 40px nằm trên khung → cảnh dời xuống theo */
+}
+
+/* ------------------------------------------------------------ token · tối */
+:root[data-style='shapes'].dark {
+  --canvas: oklch(0.182 0.019 274);
+  --background: oklch(0.182 0.019 274);
+  --foreground: oklch(0.965 0.005 277);
+  --card: oklch(0.25 0.02 277);
+  --card-dense: oklch(0.25 0.02 277);
+  --card-foreground: oklch(0.965 0.005 277);
+  --popover: oklch(0.305 0.022 277 / 50%);
+  --popover-foreground: oklch(0.965 0.005 277);
+  /* chàm tầm trung bão hoà + chữ TRẮNG (5.1:1) — nền pastel + chữ tối trông như bị vô hiệu hoá */
+  --primary: oklch(0.55 0.19 277);
+  --primary-foreground: oklch(1 0 0);
+  --primary-hover: oklch(0.59 0.18 277);
+  --primary-text: oklch(0.8 0.1 277); /* chàm tầm trung làm CHỮ trên nền tối chỉ ~3:1 → bản sáng */
+  --secondary: oklch(1 0 0 / 7%);
+  --secondary-foreground: oklch(0.96 0.005 277);
+  --muted: oklch(1 0 0 / 5%);
+  --muted-foreground: oklch(0.78 0.016 277);
+  --accent: oklch(0.72 0.1 277 / 14%);
+  --accent-foreground: oklch(0.97 0.005 277);
+  /* đỏ SÁNG để làm CHỮ trên nền tối; nền nút xoá dùng --destructive-solid (chữ trắng). Chỗ nào tô
+     `bg-destructive` + `text-destructive-foreground` (nút xoá cạnh trong builder) vẫn đọc được: chữ tối. */
+  --destructive: oklch(0.78 0.13 22);
+  --destructive-foreground: oklch(0.18 0.03 277);
+  --destructive-solid: oklch(0.55 0.2 25);
+  --destructive-solid-hover: oklch(0.59 0.19 25);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 20%);
+  --field-border: oklch(1 0 0 / 40%);
+  --ring: oklch(0.72 0.14 277);
+  --scrollbar-thumb: oklch(1 0 0 / 16%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 30%);
+  --success: oklch(0.78 0.15 163);
+  --warning: oklch(0.83 0.15 80);
+  --danger: oklch(0.78 0.12 20);
+  --scrim: oklch(0.08 0.02 277 / 45%);
+  --row-selected: color-mix(in oklab, var(--primary) 15%, transparent);
+  --row-hover: oklch(1 0 0 / 4.5%);
+
+  --glass-panel: oklch(0.205 0.018 277);
+  --glass-fill-panel: oklch(0.23 0.02 277 / 70%);
+  --chip: oklch(1 0 0 / 8%);
+  --lens: oklch(1 0 0 / 10%);
+  --glass-edge: oklch(1 0 0 / 9%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 8%), inset 0 0 0 1px oklch(1 0 0 / 3%);
+  --panel-highlight: inset 0 1px 0 0 oklch(1 0 0 / 10%), inset 0 0 0 1px oklch(1 0 0 / 3%);
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 16%), inset 0 0 0 1px oklch(1 0 0 / 6%);
+  --glass-shadow: 0 1px 2px oklch(0 0 0 / 25%), 0 10px 28px -14px oklch(0 0 0 / 55%);
+  --panel-shadow: 0 1px 2px oklch(0 0 0 / 30%), 0 18px 44px -22px oklch(0 0 0 / 65%);
+  --float-shadow: 0 2px 10px oklch(0 0 0 / 35%), 0 28px 64px -16px oklch(0 0 0 / 70%);
+  --lens-shadow: 0 1px 2px oklch(0 0 0 / 30%), 0 4px 10px -6px oklch(0 0 0 / 45%);
+  --primary-glow: 0 6px 18px -8px oklch(0.55 0.19 277 / 75%);
+
+  --shape-moon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='240'%3E%3Ccircle cx='190' cy='10' r='230' fill='%232d3064'/%3E%3C/svg%3E");
+  --shape-horizon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='290'%3E%3Ccircle cx='260' cy='910' r='900' fill='%231e213e'/%3E%3Ccircle cx='260' cy='910' r='790' fill='%23282a5e'/%3E%3C/svg%3E");
+}
+
+:root[data-style='shapes']:has([data-ui='titlebar']) {
+  --frame-top: 40px;
+}
+
+/* ------------------------------------------------------------ khung: hai tấm kính nổi
+   Nền của tấm = cảnh khối màu (fixed → toạ độ cửa sổ, tự bị cắt theo khung bo tròn của tấm).
+   Kính = `::before` z-index -1 trong hộp `isolation: isolate`: blur + phủ màu đè lên nền đó.
+   KHÔNG đặt backdrop-filter thẳng lên tấm (sẽ nhốt mọi con `position: fixed`). */
+:root[data-style='shapes'] :is([data-ui='sidebar'], [data-ui='rail']) {
+  isolation: isolate;
+  border: 1px solid var(--glass-edge);
+  background-color: transparent;
+  background-image: var(--shape-moon), var(--shape-horizon);
+  background-position:
+    left 0 top var(--frame-top),
+    left 0 bottom 0;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-clip: padding-box;
+  box-shadow: var(--panel-shadow);
+}
+:root[data-style='shapes'] :is([data-ui='sidebar'], [data-ui='rail'])::before {
+  z-index: -1;
+  background-color: var(--glass-fill-panel);
+  -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+  box-shadow: var(--panel-highlight);
+}
+:root[data-style='shapes'] [data-ui='sidebar'] {
+  margin: 10px 0 10px 10px;
+  border-radius: 18px;
+}
+:root[data-style='shapes'] [data-ui='rail'] {
+  margin: 0 0 10px 10px; /* mép trên đã có topbar đệm */
+  border-radius: 16px;
+}
+
+/* topbar + thanh tiêu đề: không tấm, không viền — nằm thẳng trên nền như một dải của cửa sổ */
+:root[data-style='shapes'] :is([data-ui='topbar'], [data-ui='titlebar']) {
+  border-color: transparent;
+  background-color: transparent;
+}
+:root[data-style='shapes'] :is([data-ui='topbar'], [data-ui='titlebar'])::before {
+  content: none;
+}
+/* nút cửa sổ ([data-ui=window-control]): icon `foreground/75` + nút đóng hover nền `--window-close` đặc, X trắng
+   (5.4:1) đều do gốc vẽ ở mọi phong cách — phong cách này không khác gì nên không đè. */
+
+/* ------------------------------------------------------------ khối chứa trong trang
+   Nền tấm chỉ phủ tới mép TRONG của viền → viền 1px `--glass-edge` nằm trên nền trang, đọc ra thành một
+   mép mảnh rõ (nằm trên chính tấm trắng thì gần như biến mất). */
+:root[data-style='shapes'] :is(.glass, [data-ui='filter-bar']) {
+  background-clip: padding-box;
+}
+:root[data-style='shapes'] [data-ui='filter-bar'] {
+  border-color: var(--glass-edge);
+  border-radius: calc(var(--radius) + 4px); /* = rounded-xl của card */
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+/* dải tiêu đề bảng */
+:root[data-style='shapes'] thead tr {
+  background-color: oklch(0.5 0.04 277 / 3.5%);
+}
+:root[data-style='shapes'].dark thead tr {
+  background-color: oklch(1 0 0 / 2.5%);
+}
+:root[data-style='shapes'] tbody tr[data-state='selected'] {
+  background-color: var(--row-selected);
+}
+/* hàng dưới chuột (hàng "không có kết quả" là một ô colspan — không tô) */
+:root[data-style='shapes'] tbody tr:not([data-state='selected'], :has(> td[colspan])):hover {
+  background-color: var(--row-hover);
+}
+
+/* builder kịch bản: trang tràn mép duy nhất (không PageContainer, không rail) — không có gì thì nó dính
+   sát vào mép tấm sidebar và chạy tới tận mép cửa sổ, trong khi mọi tấm khác nổi cách mép 10px. Ở đây
+   nó thành MỘT tấm như rail: cách 10px, bo 16px, viền mảnh; `overflow: hidden` sẵn có của main cắt góc.
+   Chế độ toàn màn hình là `position: fixed` → không bị tấm này cắt. */
+:root[data-style='shapes'] [data-ui='main']:has([data-ui='builder']) {
+  margin: 0 10px 10px 10px;
+  border: 1px solid var(--glass-edge);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+}
+
+/* ------------------------------------------------------------ lớp phủ
+   Blur/độ trong/bóng đến từ token (--popover 50%, --float-blur, --glass-saturate) qua `.glass-float`
+   của index.css; ở đây chỉ bo góc cho đồng tâm. Scrim chỉ tối đi, không blur. */
+:root[data-style='shapes'] [data-slot='dialog'] {
+  border-radius: 20px;
+}
+:root[data-style='shapes'] [data-slot='menu'] {
+  border-radius: 14px;
+  padding: 5px;
+}
+:root[data-style='shapes'] [data-slot='select-content'] {
+  border-radius: 14px;
+  padding: 1px; /* + p-1 của viewport = 5px, như menu */
+}
+:root[data-style='shapes'] :is([data-slot='menu'], [data-slot='select-content']) [role^='menuitem'],
+:root[data-style='shapes'] [data-slot='select-content'] [role='option'] {
+  border-radius: 9px;
+}
+
+/* ------------------------------------------------------------ điều khiển */
+/* primary: chàm bão hoà, chữ trắng, quầng màu mềm + mép sáng mảnh phía trên */
+:root[data-style='shapes'] [data-slot='button'][data-variant='default'] {
+  background-color: var(--primary);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='default']:hover {
+  background-color: var(--primary-hover);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='default']:not(:disabled):not(:focus-visible) {
+  box-shadow: inset 0 1px 0 0 oklch(1 0 0 / 22%), var(--primary-glow);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='destructive'] {
+  background-color: var(--destructive-solid);
+  color: oklch(1 0 0);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='destructive']:hover {
+  background-color: var(--destructive-solid-hover);
+}
+/* Vòng focus của nút ĐẶC: `ring-2` gốc dính sát mép nút, mà --ring (0.55) và nền chàm (0.51) cùng sắc →
+   ở chế độ sáng vòng tan vào nút, trông như nút chỉ to ra 2px. Tách bằng khe 2px để vòng hiện rõ. */
+:root[data-style='shapes'] [data-slot='button']:is([data-variant='default'], [data-variant='destructive']):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+/* outline: chip kính trắng */
+:root[data-style='shapes'] [data-slot='button'][data-variant='outline'] {
+  border-color: var(--input);
+  background-color: var(--chip);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='outline']:not(:disabled):not(:focus-visible) {
+  box-shadow: var(--glass-highlight), 0 1px 2px oklch(0.3 0.05 277 / 6%);
+}
+:root[data-style='shapes'].dark [data-slot='button'][data-variant='outline']:not(:disabled):not(:focus-visible) {
+  box-shadow: var(--glass-highlight), 0 1px 2px oklch(0 0 0 / 25%);
+}
+:root[data-style='shapes'] [data-slot='button'][data-variant='outline']:hover {
+  border-color: color-mix(in oklab, var(--primary) 35%, var(--input));
+  background-color: var(--lens);
+}
+
+/* `text-primary` (link, icon, chấm radio) đọc `--primary-text` thay cho màu NỀN nút: ở tối, chàm tầm
+   trung của nút làm CHỮ trên nền tối chỉ ~3:1. Chưa có token riêng cho "primary làm chữ" nên đành bám
+   utility này. */
+:root[data-style='shapes'] .text-primary {
+  color: var(--primary-text);
+}
+
+/* nav sidebar: mục đang mở = thấu kính nổi, icon + vạch chỉ báo màu nhấn */
+:root[data-style='shapes'] [data-ui='nav-item'][aria-current='page'] {
+  background-color: var(--lens);
+  color: var(--foreground);
+}
+:root[data-style='shapes'] [data-ui='nav-item'][aria-current='page']:not(:focus-visible) {
+  box-shadow: var(--glass-highlight), var(--lens-shadow);
+}
+:root[data-style='shapes'] [data-ui='nav-item'][aria-current='page'] svg {
+  color: var(--primary-text);
+}
+:root[data-style='shapes'] [data-ui='nav-indicator'] {
+  left: 0;
+  width: 3px;
+  height: 16px;
+  background-color: var(--primary-text);
+}
+
+/* rail nhóm: nhóm đang chọn = cùng thấu kính */
+:root[data-style='shapes'] [data-ui='rail-item'][data-active] {
+  background-color: var(--lens);
+  color: var(--foreground);
+}
+/* Vòng focus của mục (Tab tới nút chọn nhóm) là `ring-2` của gốc — cũng là box-shadow, nên bóng thấu kính
+   (không-layer) sẽ xoá nó ở mục đang chọn. Lúc đó nhường box-shadow cho vòng gốc: đúng MỘT vòng. */
+:root[data-style='shapes'] [data-ui='rail-item'][data-active]:not(:has(> button:focus-visible)) {
+  box-shadow: var(--glass-highlight), var(--lens-shadow);
+}
+
+/* tab phân đoạn: rãnh chìm + thấu kính nổi */
+:root[data-style='shapes'] [data-slot='tabs-list'] {
+  background-color: var(--muted);
+}
+:root[data-style='shapes'] [data-slot='tabs-trigger'][data-state='active'] {
+  background-color: var(--lens);
+}
+:root[data-style='shapes'] [data-slot='tabs-trigger'][data-state='active']:not(:focus-visible) {
+  box-shadow: var(--glass-highlight), var(--lens-shadow);
+}
+
+:root[data-style='shapes'] [data-slot='checkbox'] {
+  border-radius: 5px;
+}
+
+/* ------------------------------------------------------------ giảm trong suốt
+   (Windows "Hiệu ứng trong suốt" tắt / người dùng xin): mọi tầng đục, bỏ khối màu, bỏ blur tấm khung.
+   Blur của lớp phủ + header dính đã được index.css tắt. */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style='shapes'] {
+    --glass-fill-panel: oklch(0.975 0.006 277);
+    --popover: oklch(0.995 0.003 277);
+    --chip: oklch(1 0 0);
+    --lens: oklch(1 0 0);
+  }
+  :root[data-style='shapes'].dark {
+    --glass-fill-panel: oklch(0.205 0.018 277);
+    --popover: oklch(0.27 0.022 277);
+    --chip: oklch(0.27 0.02 277);
+    --lens: oklch(0.29 0.02 277);
+  }
+  :root[data-style='shapes'] :is([data-ui='sidebar'], [data-ui='rail']) {
+    background-image: none;
+  }
+  :root[data-style='shapes'] :is([data-ui='sidebar'], [data-ui='rail'])::before {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

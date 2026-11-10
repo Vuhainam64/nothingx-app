@@ -1,0 +1,6 @@
+<svg id="vector" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+    <path id ="path_0" fill="#FFFFFFFF"
+        d="M3,7C3,4.791 4.791,3 7,3H17C19.209,3 21,4.791 21,7V17C21,19.209 19.209,21 17,21H7C4.791,21 3,19.209 3,17V7Z"
+        clip-path="url(#clip_path_0)" />
+    <path id ="path_1"  d="M10,16.4L6,12.4L7.4,11L10,13.6L16.6,7L18,8.4L10,16.4Z" />
+</svg>

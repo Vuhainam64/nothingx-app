@@ -1,0 +1,155 @@
+{
+  "frameHeader": {
+    "sof": "0x55",
+    "controlDefaultTwsCrc": "0x0120",
+    "endianness": "little-endian",
+    "crcAlgorithm": "CRC-16/MODBUS (init=0xFFFF, poly=0xA001)",
+    "sppUuid": "00001105-0000-1000-8000-00805F9B34FB"
+  },
+  "queryCommands": {
+    "0xC001": {
+      "name": "QUERY_BASE_INFO",
+      "description": "Query device serial number and base info"
+    },
+    "0xC003": {
+      "name": "QUERY_CLASSIC_BT",
+      "description": "Query Classic Bluetooth connection state"
+    },
+    "0xC006": {
+      "name": "QUERY_FIRMWARE_VERSION",
+      "description": "Query earbud/case firmware version string"
+    },
+    "0xC007": {
+      "name": "QUERY_BATTERY",
+      "description": "Query Left(2), Right(3), Case(4) battery & charging flag (bit 7)"
+    },
+    "0xC009": {
+      "name": "QUERY_IN_EAR_DETECTION",
+      "description": "Query in-ear wear detection switch"
+    },
+    "0xC018": {
+      "name": "QUERY_GESTURE_CONFIG",
+      "description": "Query pinch/touch/dial gesture mappings"
+    },
+    "0xC01E": {
+      "name": "QUERY_NOISE_REDUCTION",
+      "description": "Query ANC / Transparency / Off mode (payload: [0x03])"
+    },
+    "0xC01F": {
+      "name": "QUERY_EQ_PRESET",
+      "description": "Query active EQ preset mode"
+    },
+    "0xC021": {
+      "name": "QUERY_PERSONALIZED_ANC",
+      "description": "Query personalized ANC enable state"
+    },
+    "0xC02D": {
+      "name": "QUERY_ULTRA_BASS",
+      "description": "Query Ultra Bass enhance state and level (1-5)"
+    },
+    "0xC032": {
+      "name": "QUERY_DUAL_CONNECTION",
+      "description": "Query multipoint dual connection state and paired hosts"
+    },
+    "0xC035": {
+      "name": "QUERY_SPATIAL_AUDIO",
+      "description": "Query Spatial Audio and Head Tracking mode"
+    },
+    "0xC040": {
+      "name": "QUERY_LOW_LAG_MODE",
+      "description": "Query Low Lag (Game) mode state"
+    },
+    "0xC044": {
+      "name": "QUERY_CUSTOM_EQ",
+      "description": "Query 3-band Simple Custom EQ gains"
+    },
+    "0xC048": {
+      "name": "QUERY_LDAC_LHDC_CODEC",
+      "description": "Query high-res audio codec (LDAC/LHDC) switch"
+    },
+    "0xC04D": {
+      "name": "QUERY_ADVANCED_EQ",
+      "description": "Query 8-band Advanced Parametric EQ profile"
+    }
+  },
+  "setCommands": {
+    "0xF002": {
+      "name": "SET_FIND_MY_EARBUDS",
+      "description": "Play/stop high-frequency ringing tone on L(2)/R(3) earbud"
+    },
+    "0xF003": {
+      "name": "SET_GESTURE_CONFIG",
+      "description": "Write gesture mapping [count, (deviceId, buttonId, gestureType, actionCode)*]"
+    },
+    "0xF004": {
+      "name": "SET_IN_EAR_DETECTION",
+      "description": "Enable/disable in-ear detection [0x01, enable]"
+    },
+    "0xF00F": {
+      "name": "SET_NOISE_REDUCTION",
+      "description": "Set ANC/Transparency/Off [0x01, mode, 0x00] (1=High,2=Mid,3=Low,4=Adaptive,5=Off,7=Transparency)"
+    },
+    "0xF010": {
+      "name": "SET_EQ_PRESET",
+      "description": "Set EQ preset [mode, 0x00] (0=Balanced,1=Voice,2=MoreTreble,3=MoreBass,4=Custom,5=Advanced)"
+    },
+    "0xF014": {
+      "name": "SET_EAR_FIT_TEST",
+      "description": "Start/stop Ear Tip Fit Test [enable]"
+    },
+    "0xF015": {
+      "name": "SET_PERSONALIZED_ANC",
+      "description": "Enable/disable Personalized ANC [enable]"
+    },
+    "0xF01D": {
+      "name": "SET_ULTRA_BASS",
+      "description": "Set Ultra Bass [enable, level*2]"
+    },
+    "0xF020": {
+      "name": "SET_DUAL_CONNECTION",
+      "description": "Set Multipoint Dual Connection state"
+    },
+    "0xF024": {
+      "name": "SET_SPATIAL_AUDIO",
+      "description": "Set Spatial Audio & Head Tracking [spatial, headTracking]"
+    },
+    "0xF040": {
+      "name": "SET_LOW_LAG_MODE",
+      "description": "Enable/disable Low Lag Mode [enable, 0x00]"
+    },
+    "0xF041": {
+      "name": "SET_CUSTOM_EQ",
+      "description": "Write 3-band Simple Custom EQ biquad coefficients"
+    },
+    "0xF04C": {
+      "name": "SET_ADVANCED_EQ",
+      "description": "Write 8-band Parametric EQ (110 bytes: [0x00, 0x08, totalGain_f32_le, (type_u8, gain_f32, freq_f32, q_f32)*8])"
+    }
+  },
+  "notifications": {
+    "0xE001": {
+      "name": "NOTIFY_BATTERY",
+      "description": "Asynchronous battery & charging status update"
+    },
+    "0xE002": {
+      "name": "NOTIFY_IN_EAR_STATUS",
+      "description": "Asynchronous in-ear wearing state update"
+    },
+    "0xE003": {
+      "name": "NOTIFY_NOISE_REDUCTION",
+      "description": "Asynchronous ANC mode change (e.g. from pinch-and-hold on earbud)"
+    },
+    "0xE005": {
+      "name": "NOTIFY_EQ_CHANGED",
+      "description": "Asynchronous EQ mode change notification"
+    },
+    "0xE007": {
+      "name": "NOTIFY_EAR_FIT_RESULT",
+      "description": "Ear Tip Fit Test completion result (Left/Right fit quality)"
+    },
+    "0xE013": {
+      "name": "NOTIFY_DUAL_CONNECTION",
+      "description": "Multipoint host connection/disconnection event"
+    }
+  }
+}

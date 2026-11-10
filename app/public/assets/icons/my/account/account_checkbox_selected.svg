@@ -1,0 +1,13 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="_Checkbox" clip-path="url(#clip0_1676_44599)">
+<path id="container" d="M3 7C3 4.79086 4.79086 3 7 3H17C19.2091 3 21 4.79086 21 7V17C21 19.2091 19.2091 21 17 21H7C4.79086 21 3 19.2091 3 17V7Z" fill="#D71921"/>
+<g id="Icons/check_small">
+<path id="icon" d="M10 16.4L6 12.4L7.4 11L10 13.6L16.6 7L18 8.4L10 16.4Z" fill="white"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_1676_44599">
+<rect width="24" height="24" fill="white"/>
+</clipPath>
+</defs>
+</svg>

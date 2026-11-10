@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="19 19 18 18" fill="none">
+  <path d="M21 20H25C25.5523 20 26 20.4477 26 21V25C26 25.5523 25.5523 26 25 26H21C20.4477 26 20 25.5523 20 25V21C20 20.4477 20.4477 20 21 20Z" stroke="#06080A" stroke-width="2" fill="none"/>
+  <path d="M21 30H25C25.5523 30 26 30.4477 26 31V35C26 35.5523 25.5523 36 25 36H21C20.4477 36 20 35.5523 20 35V31C20 30.4477 20.4477 30 21 30Z" stroke="#06080A" stroke-width="2" fill="none"/>
+  <path d="M31 20H35C35.5523 20 36 20.4477 36 21V25C36 25.5523 35.5523 26 35 26H31C30.4477 26 30 25.5523 30 25V21C30 20.4477 30.4477 20 31 20Z" stroke="#06080A" stroke-width="2" fill="none"/>
+  <rect x="29" y="29" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="31" y="31" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="29" y="33" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="31" y="35" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="33" y="29" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="35" y="31" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="33" y="33" width="2" height="2" rx="1" fill="#1C1C1C"/>
+  <rect x="35" y="35" width="2" height="2" rx="1" fill="#1C1C1C"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg id="vector" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+    <defs>
+        <clipPath id="clip_path_0">
+            <path d="M0,0h24v24h-24z" />
+        </clipPath>
+    </defs>
+    <g id="g_0">
+        <path fill="#00000000" stroke-width="1"
+            d="M6,2.5L18,2.5A3.5,3.5 0,0 1,21.5 6L21.5,18A3.5,3.5 0,0 1,18 21.5L6,21.5A3.5,3.5 0,0 1,2.5 18L2.5,6A3.5,3.5 0,0 1,6 2.5z"
+            stroke="#C8C8C8" clip-path="url(#clip_path_0)" />
+    </g>
+</svg>

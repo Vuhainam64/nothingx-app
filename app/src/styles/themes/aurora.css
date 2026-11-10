@@ -1,0 +1,377 @@
+/* ==========================================================================================
+   PHONG CÁCH B — "Aurora tiết chế"  (`<html data-style="aurora">`, sáng + tối)
+
+   Nền    = MỘT màu nền ngả tím + MỘT vầng sáng lilac góc trên-trái + một vầng mờ hơn CÙNG sắc
+            ở góc dưới-phải. Không sắc thứ hai, không gradient trên component.
+   Khung  = sidebar + rail nhóm là hai TẤM KÍNH NỔI (thụt lề, bo tròn, viền mảnh + bóng mềm) —
+            không có đường kẻ dọc suốt chiều cao. Title bar + topbar nằm THẲNG trên nền (không dải
+            màu, không vạch dưới) → cả khung cửa sổ đọc như một mặt nền liền.
+   Tầng   = nền < tấm (sidebar, rail) < card / bảng < lớp phủ.
+   Nhấn   = một màu tím bão hoà, nhãn TRẮNG ở cả hai chế độ.
+
+   Kính khối chứa KHÔNG blur: thứ duy nhất nằm sau sidebar/rail/card là gradient nền — mịn sẵn,
+   blur 28px không đổi được pixel nào. Chỉ cần nền TRONG (token bên dưới). Nhờ vậy không cần
+   `::before` z-index:-1 + `isolation` (tạo stacking context, nhốt z-index của con `fixed`) và
+   không có `backdrop-filter` nào trên khối chứa. Kính THẬT (blur) chỉ ở lớp phủ (`.glass-float`)
+   và header trang khi đã dính — nơi có nội dung thật trôi phía sau.
+
+   Mọi token đặt ở chế độ sáng đều PHẢI đặt lại ở `.dark`: `:root[data-style]` (0,2,0) thắng
+   `.dark` (0,1,0) của index.css, thiếu một token là giá trị sáng rò sang tối.
+   ========================================================================================== */
+
+:root[data-style='aurora'] {
+  --radius: 0.75rem;
+
+  /* ---- nền ---- */
+  --canvas: oklch(0.958 0.013 288);
+  --aurora-a: oklch(0.83 0.09 292);
+  --aurora-b: oklch(0.86 0.07 288 / 62%);
+
+  --background: oklch(0.985 0.004 285);
+  --foreground: oklch(0.2 0.025 280);
+  --card: oklch(0.995 0.003 285);
+  --card-foreground: oklch(0.2 0.025 280);
+  /* lớp phủ ~50%: đủ trong để THẤY kính (người dùng yêu cầu) — chữ vẫn ≥ 4.5:1 nhờ blur trộn nền */
+  --popover: oklch(1 0 0 / 50%);
+  --popover-foreground: oklch(0.2 0.025 280);
+
+  --primary: oklch(0.53 0.2 285);
+  --primary-foreground: oklch(1 0 0);
+  /* tím dùng làm CHỮ / icon — 0.47: chip phiên bản 10px trên title bar nằm ngay vầng lilac sáng nhất
+     (0.53 ở đó chỉ 3.97:1) */
+  --primary-ink: oklch(0.47 0.2 285);
+  --secondary: oklch(0.5 0.06 282 / 9%);
+  --secondary-foreground: oklch(0.25 0.03 280);
+  --muted: oklch(0.5 0.06 282 / 7%);
+  --muted-foreground: oklch(0.44 0.03 282);
+  --accent: oklch(0.55 0.14 287 / 11%);
+  --accent-foreground: oklch(0.25 0.06 285);
+  --destructive: oklch(0.52 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.45 0.06 282 / 17%);
+  --input: oklch(0.45 0.06 282 / 32%);
+  /* 0.42/76% (không phải 0.45/70% của bản mẫu): ô tìm kiếm nằm THẲNG trên vầng lilac (không có card
+     phía sau) — ở đó viền 70% chỉ còn 2.8:1; mức này ≥ 3.4:1 cả trên vầng sáng lẫn trong dialog kính */
+  --field-border: oklch(0.42 0.05 282 / 76%);
+  --row-hover: oklch(0.55 0.14 287 / 8%); /* hàng bảng khi hover (muted/50 mặc định gần như không thấy: 1.05:1) */
+  --ring: oklch(0.53 0.2 285);
+  --scrollbar-thumb: oklch(0.35 0.05 282 / 22%);
+  --scrollbar-thumb-hover: oklch(0.35 0.05 282 / 38%);
+
+  /* ---- kính: khối chứa (nền trong, KHÔNG blur — xem đầu file) ---- */
+  --glass-panel: oklch(1 0 0 / 52%); /* bg-panel: tấm nổi sidebar, rail */
+  --glass-card: oklch(1 0 0 / 76%); /* card (.glass + bg-card) */
+  --card-dense: oklch(1 0 0 / 88%); /* bảng dày chữ: đọc được trước đã */
+  --chip: oklch(1 0 0 / 78%);
+  --tool-chip: oklch(1 0 0 / 50%); /* nút tròn trên topbar */
+  --glass-edge: oklch(0.45 0.07 282 / 14%);
+  --slab-edge: oklch(0.45 0.07 282 / 16%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 90%), inset 0 0 0 1px oklch(1 0 0 / 40%);
+  --slab-highlight: inset 0 1px 0 0 oklch(1 0 0 / 85%), inset 0 0 0 1px oklch(1 0 0 / 35%);
+  --glass-shadow: 0 1px 2px oklch(0.3 0.06 282 / 8%), 0 12px 28px -16px oklch(0.3 0.08 282 / 22%);
+  --slab-shadow: 0 1px 2px oklch(0.3 0.06 282 / 6%), 0 16px 36px -18px oklch(0.3 0.08 285 / 26%);
+  --tool-shadow: 0 1px 2px oklch(0.3 0.06 282 / 8%);
+  --thead-band: oklch(0.5 0.06 285 / 3.5%);
+  --primary-glow: inset 0 1px 0 0 oklch(1 0 0 / 22%), 0 4px 14px -4px oklch(0.53 0.2 285 / 45%);
+
+  /* ---- kính: header trang dính + lớp phủ (blur thật) ---- */
+  --glass-blur-strong: 28px;
+  --glass-saturate: 150%;
+  --header-stuck-fill: oklch(0.97 0.008 285 / 62%);
+  --float-saturate: 180%;
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 95%), inset 0 0 0 1px oklch(1 0 0 / 50%);
+  --float-shadow: 0 2px 8px oklch(0.3 0.06 282 / 10%), 0 24px 56px -16px oklch(0.28 0.09 282 / 32%);
+  --scrim: oklch(0.25 0.02 280 / 20%); /* chỉ làm tối, không blur */
+
+  /* ---- mục đang chọn (sidebar / rail): viên kính trắng + vạch tím nhỏ ---- */
+  --nav-active: oklch(1 0 0 / 80%);
+  --nav-active-shadow: inset 0 1px 0 0 oklch(1 0 0 / 90%), 0 1px 2px oklch(0.3 0.08 285 / 10%),
+    0 2px 8px -4px oklch(0.3 0.08 285 / 18%);
+  --nav-indicator: oklch(0.53 0.2 285);
+
+  --success: oklch(0.44 0.1 167);
+  --warning: oklch(0.48 0.13 50);
+  --danger: oklch(0.51 0.2 27);
+}
+
+:root[data-style='aurora'].dark {
+  /* navy sâu, ít sắc — màu DUY NHẤT đến từ vầng sáng mận góc trên-trái */
+  --canvas: oklch(0.182 0.022 274);
+  --aurora-a: oklch(0.4 0.1 288 / 55%);
+  --aurora-b: oklch(0.3 0.07 288 / 30%);
+
+  --background: oklch(0.195 0.02 274);
+  --foreground: oklch(0.955 0.006 280);
+  --card: oklch(0.25 0.02 276);
+  --card-foreground: oklch(0.955 0.006 280);
+  --popover: oklch(0.29 0.022 277 / 50%);
+  --popover-foreground: oklch(0.955 0.006 280);
+
+  --primary: oklch(0.56 0.19 285);
+  --primary-foreground: oklch(1 0 0);
+  --primary-ink: oklch(0.8 0.1 285);
+  --secondary: oklch(1 0 0 / 7%);
+  --secondary-foreground: oklch(0.955 0.006 280);
+  --muted: oklch(1 0 0 / 6%);
+  --muted-foreground: oklch(0.78 0.022 280);
+  --accent: oklch(0.72 0.12 285 / 14%);
+  --accent-foreground: oklch(0.96 0.008 280);
+  /* đỏ SÁNG: tối-mode dùng destructive làm CHỮ nhiều hơn làm nền nút → nhãn nút là chữ tối */
+  --destructive: oklch(0.8 0.13 22);
+  --destructive-foreground: oklch(0.2 0.03 275);
+  /* thân NÚT xoá (chữ trắng) — xem luật nút xoá ở mục focus */
+  --destructive-fill: oklch(0.55 0.2 25);
+  --destructive-fill-hover: oklch(0.585 0.19 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 22%);
+  --field-border: oklch(1 0 0 / 38%);
+  --row-hover: oklch(1 0 0 / 4.5%);
+  --ring: oklch(0.72 0.15 285);
+  --scrollbar-thumb: oklch(1 0 0 / 16%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 30%);
+
+  /* sắc 0.032 (không phải 0.022): bù phần tím mà saturate(150%) của bản mẫu (blur khối chứa) từng thêm */
+  --glass-panel: oklch(0.225 0.032 282 / 68%);
+  --glass-card: oklch(0.26 0.022 277 / 70%);
+  --card-dense: oklch(0.25 0.02 276 / 86%);
+  --chip: oklch(1 0 0 / 9%);
+  --tool-chip: oklch(1 0 0 / 5%);
+  --glass-edge: oklch(1 0 0 / 9%);
+  --slab-edge: oklch(1 0 0 / 9%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 9%), inset 0 0 0 1px oklch(1 0 0 / 3%);
+  --slab-highlight: inset 0 1px 0 0 oklch(1 0 0 / 12%), inset 0 0 0 1px oklch(1 0 0 / 3.5%);
+  --glass-shadow: 0 1px 2px oklch(0 0 0 / 30%), 0 12px 32px -14px oklch(0 0 0 / 55%);
+  --slab-shadow: 0 1px 2px oklch(0 0 0 / 30%), 0 18px 40px -20px oklch(0 0 0 / 60%);
+  --tool-shadow: 0 1px 2px oklch(0 0 0 / 25%);
+  --thead-band: oklch(1 0 0 / 2.5%);
+  --primary-glow: inset 0 1px 0 0 oklch(1 0 0 / 18%), 0 2px 10px oklch(0.56 0.19 285 / 30%);
+
+  --header-stuck-fill: oklch(0.2 0.02 274 / 62%);
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 14%), inset 0 0 0 1px oklch(1 0 0 / 6%);
+  --float-shadow: 0 2px 8px oklch(0 0 0 / 40%), 0 26px 60px -14px oklch(0 0 0 / 70%);
+  --scrim: oklch(0.08 0.015 274 / 45%);
+
+  --nav-active: oklch(1 0 0 / 8%);
+  --nav-active-shadow: inset 0 1px 0 0 oklch(1 0 0 / 8%), 0 1px 2px oklch(0 0 0 / 25%);
+  --nav-indicator: oklch(0.74 0.14 285);
+
+  --success: oklch(0.78 0.15 163);
+  --warning: oklch(0.83 0.16 84);
+  --danger: oklch(0.8 0.12 20);
+}
+
+/* ------------------------------------------------------------------ nền: màu + vầng sáng */
+:root[data-style='aurora'] body {
+  background-image:
+    radial-gradient(
+      ellipse 85vw 115vh at 4% -14%,
+      var(--aurora-a) 0%,
+      color-mix(in oklab, var(--aurora-a) 62%, transparent) 30%,
+      color-mix(in oklab, var(--aurora-a) 26%, transparent) 58%,
+      color-mix(in oklab, var(--aurora-a) 7%, transparent) 80%,
+      transparent 100%
+    ),
+    radial-gradient(
+      ellipse 65vw 75vh at 104% 108%,
+      var(--aurora-b) 0%,
+      color-mix(in oklab, var(--aurora-b) 55%, transparent) 35%,
+      color-mix(in oklab, var(--aurora-b) 18%, transparent) 65%,
+      transparent 100%
+    );
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------------ kính: khối chứa
+   `bg-card` của mọi khối `.glass` đọc `--card` → đổi token NGAY TRÊN khối đó thành bản trong.
+   `--card` toàn cục vẫn ĐỤC (node workflow, nhãn cạnh… cần che nét phía sau). */
+:root[data-style='aurora'] .glass {
+  --card: var(--glass-card);
+}
+/* nền dừng ở mép TRONG viền: viền mảnh vẽ thẳng lên nền trang chứ không lên lớp trắng của tấm
+   → vành tấm kính sắc hơn (nền trong trải dưới viền làm viền nhạt đi một nửa) */
+:root[data-style='aurora'] :is(.glass, [data-ui='filter-bar']) {
+  background-clip: padding-box;
+}
+
+/* thanh lọc ngày (bg-card thường, không .glass) → cùng một tấm card kính */
+:root[data-style='aurora'] [data-ui='filter-bar'] {
+  background-color: var(--glass-card);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--glass-shadow);
+}
+
+/* ---- tấm nổi: sidebar + rail nhóm ---- */
+:root[data-style='aurora'] :is([data-ui='sidebar'], [data-ui='rail']) {
+  margin: 10px 0 10px 10px;
+  border: 1px solid var(--slab-edge);
+  border-radius: 18px;
+  box-shadow: var(--slab-shadow);
+}
+:root[data-style='aurora'] :is([data-ui='sidebar'], [data-ui='rail'])::before {
+  box-shadow: var(--slab-highlight);
+}
+/* rail nằm ngay dưới topbar (trong <main>) → không thụt thêm ở trên, bo nhỏ hơn một chút */
+:root[data-style='aurora'] [data-ui='rail'] {
+  margin-top: 0;
+  border-radius: 16px;
+}
+
+/* ---- title bar + topbar: nằm thẳng trên nền, không dải, không vạch dưới ---- */
+:root[data-style='aurora'] :is([data-ui='titlebar'], [data-ui='topbar']) {
+  background-color: transparent;
+  border-bottom-color: transparent;
+}
+:root[data-style='aurora'] :is([data-ui='titlebar'], [data-ui='topbar'])::before {
+  box-shadow: none;
+}
+/* Nút cửa sổ ([data-ui='window-control']): KHÔNG ghi đè — gốc đã đúng ý phong cách này (icon
+   foreground/75, nút đóng hover = `--window-close` đỏ đậm cố định + X trắng ở cả hai chế độ). */
+
+/* nút icon trên topbar → nút kính tròn nhỏ */
+:root[data-style='aurora'] [data-ui='topbar'] [data-slot='button'][data-size='icon'] {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: var(--tool-chip);
+}
+:root[data-style='aurora'] [data-ui='topbar'] [data-slot='button'][data-size='icon']:not(:focus-visible) {
+  box-shadow: var(--glass-highlight), var(--tool-shadow);
+}
+:root[data-style='aurora'] [data-ui='topbar'] [data-slot='button'][data-size='icon']:hover {
+  background-color: var(--chip);
+}
+
+/* ------------------------------------------------------------------ mục đang chọn
+   Trang hiện tại (sidebar) / nhóm đang chọn (rail): viên kính trắng thay cho nền accent. */
+:root[data-style='aurora'] :is([data-ui='nav-item'][aria-current='page'], [data-ui='rail-item'][data-active]) {
+  background-color: var(--nav-active);
+  color: var(--foreground);
+}
+/* Bóng viên kính cũng là box-shadow — luật không-layer này thắng vòng focus ring-2 (box-shadow của
+   Tailwind) của gốc → tránh ra khi đang focus: nav-item tự focus, rail-item khi nút con của nó focus
+   (gốc vẽ ring-2 lên cả viên qua `has-[>button:focus-visible]`). Chỉ MỘT vòng: vòng của gốc. */
+:root[data-style='aurora'] :is([data-ui='nav-item'][aria-current='page'], [data-ui='rail-item'][data-active]):not(:focus-visible, :has(> button:focus-visible)) {
+  box-shadow: var(--nav-active-shadow);
+}
+:root[data-style='aurora'] [data-ui='nav-item'][aria-current='page'] svg {
+  color: var(--primary-ink);
+}
+/* vạch chỉ báo: một đoạn tím ngắn bo tròn NẰM TRONG viên (bản gốc: vạch đen dính mép trái) */
+:root[data-style='aurora'] [data-ui='nav-indicator'] {
+  left: 4px;
+  width: 3px;
+  height: 16px;
+  border-radius: 3px;
+  background-color: var(--nav-indicator);
+}
+
+/* ------------------------------------------------------------------ chữ tím
+   `--primary` là màu NỀN nút (nhãn trắng ở cả hai chế độ) — làm CHỮ thì trên nền tối chỉ ~3:1,
+   trên vầng lilac sáng ~4:1 → chữ/icon tím dùng `--primary-ink` (tối: sáng hơn, sáng: đậm hơn). */
+:root[data-style='aurora'] .text-primary {
+  color: var(--primary-ink);
+}
+
+/* ------------------------------------------------------------------ focus
+   Nút primary: `--ring` = `--primary` → ring-2 dính liền cùng màu nền nút, chỉ làm nút TO thêm 2px,
+   không ai thấy là đang focus. Chèn khe màu nền trang (offset) giữa nút và vòng. */
+:root[data-style='aurora'] [data-slot='button'][data-variant='default']:focus-visible {
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ring), var(--primary-glow);
+}
+/* nút xoá (đặc) cùng khe tách như nút primary — một hình dạng vòng focus cho mọi nút đặc */
+:root[data-style='aurora'] [data-slot='button'][data-variant='destructive']:focus-visible {
+  box-shadow: 0 0 0 2px var(--canvas), 0 0 0 4px var(--ring);
+}
+/* Nút xoá ở chế độ tối: `--destructive` tối là đỏ SÁNG (để làm CHỮ đỏ trên nền tối) → nút thành viên hồng
+   nhạt + chữ tối, lệch hẳn khỏi nút xoá đỏ đậm + chữ trắng của chế độ sáng và của các phong cách khác.
+   Tô thân bằng đỏ đậm (5.4:1 với chữ trắng · hover 4.6:1). */
+:root[data-style='aurora'].dark [data-slot='button'][data-variant='destructive'] {
+  background-color: var(--destructive-fill);
+  color: oklch(1 0 0);
+}
+:root[data-style='aurora'].dark [data-slot='button'][data-variant='destructive']:hover {
+  background-color: var(--destructive-fill-hover);
+}
+/* Công tắc phân đoạn ([data-slot='segmented-item']) và tab trigger: gốc đã có `outline-none` + ring-2 →
+   không cần vá focus riêng ở đây. */
+/* Checkbox đã chọn / chọn một phần ở chế độ tối: nền primary 0.56 trên hàng tối chỉ ~2.8:1 → viền sáng
+   hơn (màu ring) để ô vẫn tách khỏi nền ≥ 3:1; dấu ✓ / – trắng trên tím giữ nguyên. */
+:root[data-style='aurora'].dark [data-slot='checkbox']:is([data-state='checked'], [data-state='indeterminate']) {
+  border-color: var(--ring);
+}
+
+/* ------------------------------------------------------------------ bảng: hover hàng */
+:root[data-style='aurora'] tbody tr:not([data-state='selected'], :has(> td[colspan])):hover {
+  background-color: var(--row-hover);
+}
+
+/* ------------------------------------------------------------------ lớp phủ
+   Blur/nền đã do token (`--float-blur`, `--popover` 50%); chỉ tăng bão hoà riêng cho lớp phủ.
+   Đặt BIẾN chứ không viết lại `backdrop-filter` → luật giảm-trong-suốt của index.css vẫn tắt blur. */
+:root[data-style='aurora'] .glass-float {
+  --glass-saturate: var(--float-saturate);
+}
+
+/* ------------------------------------------------------------------ header trang (sticky)
+   Tấm nổi bo tròn của PageHeader. Đứng yên: trong suốt (một mảng màu phẳng sẽ cắt ngang vầng sáng
+   nền). Có nội dung trôi dưới: mờ dần thành kính, CÙNG vành + bóng với tấm sidebar/rail (scroll-driven,
+   giữ timeline + range của index.css; vòng viền ::after của index.css tự hiện theo). */
+:root[data-style='aurora'] .page-header-glass {
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(0px) saturate(100%);
+  backdrop-filter: blur(0px) saturate(100%);
+  animation-name: aurora-page-header-stuck;
+}
+@keyframes aurora-page-header-stuck {
+  to {
+    background-color: var(--header-stuck-fill);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    box-shadow: var(--slab-highlight), var(--slab-shadow);
+  }
+}
+
+/* ------------------------------------------------------------------ bảng
+   Dải tiêu đề cột: một chút sắc để hàng tiêu đề đọc ra là tiêu đề. */
+:root[data-style='aurora'] thead tr {
+  background-color: var(--thead-band);
+}
+/* Dấu "—" ô trống + mũi tên breadcrumb dùng muted-foreground/60: trên kính trong chỉ ~2.9:1 →
+   74% cho ≥ 3:1. */
+:root[data-style='aurora'] :is([data-ui='empty-cell'], [data-ui='crumb-sep']) {
+  color: color-mix(in oklab, var(--muted-foreground) 74%, transparent);
+}
+
+/* ------------------------------------------------------------------ giảm trong suốt
+   Mọi bề mặt kính thành ĐỤC, nền trang phẳng, không blur. */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style='aurora'] {
+    --glass-panel: oklch(0.978 0.006 285);
+    --glass-card: oklch(0.995 0.003 285);
+    --card-dense: oklch(0.995 0.003 285);
+    --popover: oklch(1 0 0);
+    --chip: oklch(1 0 0);
+    --tool-chip: oklch(1 0 0);
+    --nav-active: oklch(1 0 0);
+  }
+  :root[data-style='aurora'].dark {
+    --glass-panel: oklch(0.215 0.02 275);
+    --glass-card: oklch(0.25 0.02 276);
+    --card-dense: oklch(0.25 0.02 276);
+    --popover: oklch(0.28 0.022 277);
+    --chip: oklch(0.3 0.02 277);
+    --tool-chip: oklch(0.24 0.02 276);
+    --nav-active: oklch(0.27 0.02 276);
+  }
+  :root[data-style='aurora'] body {
+    background-image: none;
+  }
+  /* về lại keyframes đục (chỉ bóng): keyframes kính ở trên animate `backdrop-filter`,
+     mà giá trị animation thắng mọi khai báo thường → đổi tên thay vì dùng !important */
+  :root[data-style='aurora'] .page-header-glass {
+    background-color: var(--canvas);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    animation-name: page-header-stuck-solid;
+  }
+}

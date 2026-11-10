@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="reminder">
+<rect id="Rectangle 5" x="9" y="4" width="15" height="2" rx="1" fill="#1C1C1C"/>
+<rect id="Rectangle 6" x="9" y="11" width="15" height="2" rx="1" fill="#1C1C1C"/>
+<rect id="Rectangle 7" x="9" y="18" width="15" height="2" rx="1" fill="#1C1C1C"/>
+<rect id="Rectangle 10" x="1.5" y="17" width="4" height="4" rx="2" fill="#1C1C1C"/>
+<path id="Vector 1311" d="M2 11.5L3.28436 12.7041C3.45453 12.8636 3.72456 12.8443 3.87028 12.6621L6 10" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+<path id="Vector 1312" d="M2 4.5L3.28436 5.70409C3.45453 5.86362 3.72456 5.8443 3.87028 5.66215L6 3" stroke="#1C1C1C" stroke-width="2" stroke-linecap="round"/>
+</g>
+</svg>

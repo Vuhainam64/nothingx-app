@@ -1,0 +1,32 @@
+<svg width="318" height="318" viewBox="0 0 318 318" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_49205_66524)">
+<path d="M48 111C48 109.343 49.3431 108 51 108C52.6569 108 54 109.343 54 111V137C54 138.657 52.6569 140 51 140C49.3431 140 48 138.657 48 137V111Z" fill="#323232"/>
+<path d="M264 149C264 147.343 265.343 146 267 146C268.657 146 270 147.343 270 149V199C270 200.657 268.657 202 267 202C265.343 202 264 200.657 264 199V149Z" fill="#323232"/>
+<path d="M48 149C48 147.343 49.3431 146 51 146C52.6569 146 54 147.343 54 149V175C54 176.657 52.6569 178 51 178C49.3431 178 48 176.657 48 175V149Z" fill="#323232"/>
+<rect x="53.5" y="29.5" width="211" height="388" rx="30.5" fill="black" stroke="#323232" stroke-width="5"/>
+<path d="M222 41.7754C220 41.7754 218.25 42.6504 217 44.0254L222 50.1087L227 44.0254C225.75 42.6504 224 41.7754 222 41.7754Z" fill="white"/>
+<path d="M235.579 41.7754L227.246 50.1087H235.579V41.7754V41.7754Z" fill="white"/>
+<path d="M242.591 41.5303H240.826V42.4126H239.944C239.619 42.4126 239.355 42.7089 239.355 43.0744V49.692C239.355 50.0575 239.619 50.3538 239.944 50.3538H243.473C243.798 50.3538 244.061 50.0575 244.061 49.692V43.0744C244.061 42.7089 243.798 42.4126 243.473 42.4126H242.591V41.5303Z" fill="white"/>
+<path d="M239.355 46.2361C239.355 46.5792 239.355 49.3929 239.355 49.7361C239.355 50.0772 239.619 50.3537 239.944 50.3537H243.473C243.798 50.3537 244.061 50.0772 244.061 49.7361C244.061 49.3929 244.061 46.5792 244.061 46.2361H239.355Z" fill="white"/>
+<rect opacity="0.6" x="66.5" y="78.5" width="185" height="95" rx="11.5" stroke="#323232"/>
+<rect opacity="0.6" x="66.5" y="176.5" width="91" height="79" rx="11.5" stroke="#323232"/>
+<rect opacity="0.6" x="160.5" y="176.5" width="91" height="79" rx="11.5" stroke="#323232"/>
+<rect opacity="0.6" x="66.5" y="258.5" width="91" height="79" rx="11.5" stroke="#323232"/>
+<foreignObject x="-3" y="75" width="324" height="246"><div xmlns="http://www.w3.org/1999/xhtml" style="backdrop-filter:blur(1.5px);clip-path:url(#bgblur_1_49205_66524_clip_path);height:100%;width:100%"></div></foreignObject><rect data-figma-bg-blur-radius="3" y="78" width="318" height="240" fill="url(#paint0_linear_49205_66524)"/>
+<rect x="127" y="127" width="64" height="64" rx="12" fill="#1C1C1C"/>
+<rect opacity="0.2" x="181.629" y="149.807" width="45" height="19" rx="9.5" transform="rotate(135 181.629 149.807)" fill="white"/>
+<rect x="149.684" y="136.251" width="45" height="19" rx="9.5" transform="rotate(45 149.684 136.251)" fill="white"/>
+<circle cx="168.191" cy="168.194" r="7" transform="rotate(45 168.191 168.194)" fill="#D71921"/>
+<circle cx="159" cy="46" r="6" fill="#1C1C1C"/>
+</g>
+<defs>
+<clipPath id="bgblur_1_49205_66524_clip_path" transform="translate(3 -75)"><rect y="78" width="318" height="240"/>
+</clipPath><linearGradient id="paint0_linear_49205_66524" x1="168.659" y1="144.736" x2="168.663" y2="255.963" gradientUnits="userSpaceOnUse">
+<stop stop-color="#1C1C1C" stop-opacity="0"/>
+<stop offset="1" stop-color="#1C1C1C"/>
+</linearGradient>
+<clipPath id="clip0_49205_66524">
+<rect width="318" height="318" fill="white"/>
+</clipPath>
+</defs>
+</svg>

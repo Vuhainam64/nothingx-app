@@ -1,0 +1,493 @@
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================== KÍNH TRÊN NỀN PHẲNG
+   Nền là MỘT MÀU ĐẶC (`--canvas`) — KHÔNG gradient (người dùng yêu cầu bỏ hẳn nền aurora nhiều đốm).
+   Hệ quả thiết kế, đừng quên khi sửa:
+     1. Làm mờ KHỐI CHỨA (card, sidebar, header, rail) trên một màu phẳng = không thấy gì, chỉ tốn GPU
+        → `.glass` KHÔNG blur nữa, chỉ giữ vòng sáng mép (`--glass-highlight`). Lớp PHỦ (dialog, menu,
+        select, tooltip, toast) đè lên nội dung thật nên `.glass-float` là nơi DUY NHẤT thấy kính — và chỉ
+        thấy khi nó ĐỦ TRONG + blur VỪA (thấy bóng hàng bảng/avatar mờ phía sau) + trang ngoài lớp phủ
+        SẮC NÉT (scrim chỉ tối đi, KHÔNG blur: cả trang cùng mờ thì vùng kính không còn nổi bật).
+     2. Không còn màu "xuyên qua" để tách lớp → thứ bậc  nền < rail/header < card < lớp phủ  đến từ
+        SẮC ĐỘ (các tấm ĐỤC) + viền mảnh (`--glass-edge`) + vòng sáng + HAI TẦNG BÓNG: `--glass-shadow`
+        (khối chứa, rất nhẹ — bảng dài không bị vệt) và `--float-shadow` (lớp phủ — menu trắng trên bảng
+        trắng không nổi được bằng sắc độ, phải nhờ bóng).
+     3. `--background` ≠ nền trang: sáng = một tấm gần trắng ĐỤC (núm công tắc, node/canvas builder…),
+        tối = trùng `--canvas`. Muốn "màu nền trang" thì dùng `bg-canvas`.
+   Đo thật (ảnh 1440x900): card/nền 1.21 (sáng) · 1.225 (tối); rail/nền 1.10 · 1.087; mọi cặp chữ đang
+   dùng ≥ 4.5:1, điều khiển ≥ 3:1 ở cả hai theme.
+
+   `--muted`/`--secondary`/`--accent`/`--border`/`--input` là SẮC ĐỘ TRONG SUỐT: chồng lên tấm nào
+   cũng ra đúng một mức "đậm hơn một chút". */
+:root {
+  --radius: 0.625rem;
+  /* nền trang: xám ngả lavender (hue 285 ≈ gốc của nền aurora cũ) — đủ sâu để card trắng nổi 1.21:1 */
+  --canvas: oklch(0.93 0.014 285);
+  --background: oklch(0.978 0.006 282);
+  --foreground: oklch(0.19 0.02 275);
+  /* tấm trắng ngà thay vì trắng tinh: bớt chói ở nơi mắt nhìn lâu nhất (bảng dữ liệu) */
+  --card: oklch(0.995 0.002 282);
+  /* card-dense = card: hết nền aurora thì không còn dải màu xuyên qua bảng dài — giữ token để không
+     phải sửa chỗ dùng, và để còn tách được nếu sau này cần. */
+  --card-dense: oklch(0.995 0.002 282);
+  --card-foreground: oklch(0.19 0.02 275);
+  /* 75% = mức TRONG nhất mà chữ phụ/primary/đỏ vẫn ≥ 4.5:1 kể cả khi menu đè thẳng lên nút primary
+     (đã mô hình hoá). Trong hơn nữa đẹp hơn nhưng đọc không nổi. */
+  --popover: oklch(1 0 0 / 45%);
+  --popover-foreground: oklch(0.19 0.02 275);
+  --primary: oklch(0.47 0.2 268);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.5 0.05 275 / 9%);
+  --secondary-foreground: oklch(0.25 0.02 275);
+  --muted: oklch(0.5 0.05 275 / 7%);
+  --muted-foreground: oklch(0.43 0.025 275);
+  --accent: oklch(0.55 0.12 268 / 13%);
+  --accent-foreground: oklch(0.25 0.03 275);
+  --destructive: oklch(0.49 0.2 27);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.45 0.05 275 / 14%);
+  /* `--input` = viền nút outline (nhận diện bằng CHỮ, không cần 3:1). Ô NHẬP nhận diện bằng chính viền
+     → WCAG 1.4.11 bắt 3:1 → dùng `--field-border` riêng, không kéo đậm mọi nút outline theo. */
+  --input: oklch(0.45 0.05 275 / 38%);
+  --field-border: oklch(0.45 0.05 275 / 74%);
+  --ring: oklch(0.47 0.2 268);
+  /* Nút kéo thanh cuộn. KHÔNG dùng lại `--border`: viền và nút kéo có mục đích khác nhau — viền
+     chỉ cần gợi ý một đường phân cách, còn nút kéo phải bắt được mắt và bấm trúng. */
+  --scrollbar-thumb: oklch(0.3 0.03 275 / 26%);
+  --scrollbar-thumb-hover: oklch(0.3 0.03 275 / 42%);
+
+  /* --- kính --- */
+  --glass-panel: oklch(0.962 0.009 283); /* sidebar, header, rail nhóm — một bậc giữa nền và card */
+  --chip: oklch(1 0 0 / 85%); /* phần tử "nổi" trên tấm: tab đang chọn, nút outline */
+  /* Mép = VIỀN NGOÀI tối mảnh (tách tấm khỏi nền) + VÒNG TRONG sáng (`--glass-highlight`, vẽ trên ::before). */
+  --glass-edge: oklch(0.4 0.05 275 / 17%);
+  --glass-blur-strong: 30px; /* header dính: chữ tiêu đề nằm đè nội dung đang cuộn → blur mạnh cho êm */
+  /* Lớp phủ: 12px + nền 45% là mức ĐO ĐƯỢC còn thấy rõ kính mà chữ vẫn ≥ 5.4:1 trên pixel thật
+     (đo từ ảnh chụp, không phải mô hình: blur đã trộn đều nền nên "nút primary ngay phía sau" không
+     còn là ca xấu nhất). 30px + 75/85% cũ làm nền sau thành một mảng đều → kính không thấy đâu. */
+  --float-blur: 12px;
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 90%), inset 0 0 0 1px oklch(1 0 0 / 45%);
+  --glass-saturate: 180%;
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 90%), inset 0 0 0 1px oklch(1 0 0 / 45%);
+  --glass-shadow: 0 1px 2px oklch(0.25 0.04 275 / 7%), 0 4px 16px -8px oklch(0.25 0.05 275 / 14%);
+  --float-shadow: 0 2px 6px oklch(0.25 0.05 275 / 10%), 0 18px 44px -12px oklch(0.25 0.07 275 / 34%);
+  --primary-glow: 0 4px 14px -6px oklch(0.47 0.2 268 / 50%);
+  /* Màu trạng thái NGỮ NGHĨA — dùng text-success/warning/danger thay cho text-emerald-600… rải rác:
+     shade -600 trên nền sáng chỉ 2.3–3.5:1. Giá trị ~ emerald-800 / amber-800 / red-700. */
+  --success: oklch(0.432 0.095 167);
+  --warning: oklch(0.473 0.137 46);
+  --danger: oklch(0.505 0.213 27.5);
+  --scrim: oklch(0.25 0.03 275 / 16%); /* nền mờ sau dialog — ngả tím nhẹ, không xám bùn */
+  /* khung xương đang tải: một chút MÀU CHỮ — tự đúng ở mọi phong cách + cả sáng/tối (var được thế tại <html>,
+     nơi các theme và .dark đặt --foreground). Không dùng accent: sắc nhấn ~13% biến mất trên tấm kính. */
+  --skeleton: color-mix(in oklab, var(--foreground) 10%, transparent);
+  /* nền nút ĐÓNG cửa sổ khi hover (chữ X trắng): đỏ đậm CỐ ĐỊNH cho mọi phong cách/chế độ — --destructive ở bản
+     tối là san hô nhạt dành cho CHỮ đỏ, X trắng trên nó chỉ ~2.2:1. */
+  --window-close: oklch(0.55 0.2 25);
+  /* màu nhấn node workflow — sắc -700 cho nền sáng (tiêu đề nhóm 12px, khung nét đứt cần đọc được) */
+  --node-sky: #0369a1;
+  --node-amber: #b45309;
+  --node-violet: #6d28d9;
+  --node-emerald: #047857;
+  --node-rose: #be123c;
+  --node-slate: #475569;
+  /* Tô màu code (components/CodeEditor.tsx) — sáng: VS Code Light+ */
+  --code-comment: #008000;
+  --code-string: #a31515;
+  --code-number: #098658;
+  --code-keyword: #0000ff;
+  --code-interp: #795e26;
+}
+
+.dark {
+  /* navy-xám sâu nhưng KHÔNG đen kịt (0.145 làm rail gần như dính vào nền: 1.06:1) */
+  --canvas: oklch(0.165 0.02 278);
+  --background: oklch(0.165 0.02 278);
+  --foreground: oklch(0.96 0.005 275);
+  --card: oklch(0.255 0.024 278);
+  --card-dense: oklch(0.255 0.024 278);
+  --card-foreground: oklch(0.96 0.005 275);
+  /* sáng nhất trong thang tối → menu nổi trên bảng. 85% (không thấp hơn): nút primary sáng nằm ngay sau
+     là ca xấu nhất — ở 80% chữ phụ tụt còn 4.3:1. */
+  --popover: oklch(0.305 0.026 278 / 45%);
+  --popover-foreground: oklch(0.96 0.005 275);
+  --primary: oklch(0.78 0.13 268);
+  --primary-foreground: oklch(0.16 0.03 275);
+  --secondary: oklch(1 0 0 / 7%);
+  --secondary-foreground: oklch(0.96 0.005 275);
+  --muted: oklch(1 0 0 / 6%);
+  --muted-foreground: oklch(0.77 0.02 275);
+  --accent: oklch(0.7 0.12 268 / 15%);
+  --accent-foreground: oklch(0.96 0.005 275);
+  /* Chữ TỐI trên nút đỏ: đỏ tối-mode sáng (để làm CHỮ đỏ trên nền tối), trắng trên nó chỉ 2.89:1. */
+  --destructive: oklch(0.8 0.13 22);
+  --destructive-foreground: oklch(0.16 0.03 275);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 24%);
+  --field-border: oklch(1 0 0 / 40%);
+  --ring: oklch(0.78 0.13 268);
+  --scrollbar-thumb: oklch(1 0 0 / 18%);
+  --scrollbar-thumb-hover: oklch(1 0 0 / 32%);
+
+  --glass-panel: oklch(0.21 0.022 278);
+  --chip: oklch(1 0 0 / 10%);
+  --glass-edge: oklch(1 0 0 / 10%);
+  --glass-highlight: inset 0 1px 0 0 oklch(1 0 0 / 6%);
+  /* mép "bắt sáng" của tấm kính nổi — trên nền tối đây là thứ làm nó ĐỌC ra là kính */
+  --float-highlight: inset 0 1px 0 0 oklch(1 0 0 / 16%), inset 0 0 0 1px oklch(1 0 0 / 7%);
+  --glass-shadow: 0 1px 2px oklch(0 0 0 / 30%), 0 8px 24px -10px oklch(0 0 0 / 50%);
+  --float-shadow: 0 2px 8px oklch(0 0 0 / 40%), 0 22px 50px -12px oklch(0 0 0 / 70%);
+  --primary-glow: 0 4px 16px -6px oklch(0.78 0.13 268 / 40%);
+  --success: oklch(0.765 0.177 163); /* emerald-400 */
+  --warning: oklch(0.828 0.189 84); /* amber-400 */
+  --danger: oklch(0.808 0.114 19.6); /* red-300 */
+  --scrim: oklch(0.08 0.02 275 / 40%);
+  --node-sky: #38bdf8;
+  --node-amber: #fbbf24;
+  --node-violet: #a78bfa;
+  --node-emerald: #34d399;
+  --node-rose: #fb7185;
+  --node-slate: #94a3b8;
+  /* Tô màu code — tối: VS Code Dark+ (bảng màu của bản textnow) */
+  --code-comment: #6a9955;
+  --code-string: #ce9178;
+  --code-number: #b5cea8;
+  --code-keyword: #569cd6;
+  --code-interp: #d7ba7d;
+}
+
+/* Windows "Hiệu ứng trong suốt" tắt / người dùng xin giảm trong suốt: các tấm vốn đã ĐỤC — chỉ lớp
+   phủ và chip cần bản đục (đã tổng hợp sẵn trên card nơi chúng thường nằm); blur lớp phủ tắt bên dưới. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --popover: oklch(1 0 0);
+    --chip: oklch(1 0 0);
+  }
+  .dark {
+    --popover: oklch(0.302 0.026 278);
+    --chip: oklch(0.305 0.022 278);
+  }
+}
+
+/* họ chữ → font-sans / font-mono của Tailwind trùng với body/code bên dưới */
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: "GeistMono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  /* kính → utility: bg-panel, bg-chip, border-glass-edge, shadow-glass, shadow-glow */
+  --color-panel: var(--glass-panel);
+  --color-chip: var(--chip);
+  --color-glass-edge: var(--glass-edge);
+  --shadow-glass: var(--glass-shadow);
+  --shadow-glow: var(--primary-glow);
+  --color-scrim: var(--scrim);
+  --color-canvas: var(--canvas); /* bg-canvas = màu nền trang (≠ bg-background, xem đầu file) */
+  --color-skeleton: var(--skeleton);
+  --color-window-close: var(--window-close);
+  --color-field: var(--field-border); /* border-field = viền ô nhập, đạt 3:1 */
+  --shadow-float: var(--float-shadow);
+  --color-card-dense: var(--card-dense);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  /* Nền trang: MỘT màu đặc, không lớp ảnh/gradient nào. */
+  body {
+    @apply text-foreground;
+    background-color: var(--canvas);
+  }
+  /* Con trỏ bấm cho MỌI thứ bấm được.
+     Danh sách này không chỉ có `button` vì Radix dựng khá nhiều thứ bấm được từ `div` + `role`
+     (mục của Select là `role="option"`, mục của menu là `role="menuitem"`). Vá từng component
+     thì lần sau thêm primitive mới lại thiếu; đặt luật ở đây là mặc định đúng, còn component nào
+     cần khác thì tự ghi đè bằng utility (thắng vì nằm ở layer sau). */
+  button:not(:disabled),
+  [role='button']:not(:disabled),
+  [role='tab']:not([aria-disabled='true']),
+  [role='option']:not([data-disabled]),
+  [role='menuitem']:not([data-disabled]),
+  [role='menuitemradio']:not([data-disabled]),
+  [role='menuitemcheckbox']:not([data-disabled]),
+  [role='switch']:not(:disabled),
+  [role='checkbox']:not(:disabled),
+  [role='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* ------------------------------------------------------------ thanh cuộn
+     Thanh cuộn mặc định của WebView2 là loại dày kiểu Windows, xám đặc, có nút mũi tên hai đầu —
+     lạc hẳn so với phần còn lại của giao diện.
+
+     Dùng `::-webkit-scrollbar` chứ KHÔNG dùng `scrollbar-width`/`scrollbar-color`: hai cơ chế này
+     loại trừ nhau (Chromium bỏ qua toàn bộ pseudo-element khi `scrollbar-width` có mặt), và bộ
+     chuẩn không cho bo tròn nút kéo hay tách vùng bấm khỏi vùng nhìn thấy. App chỉ chạy trong
+     WebView2 nên không mất gì khi chọn nhánh webkit.
+
+     Cũng không dùng plugin kiểu `tailwind-scrollbar`: nó cho class tiện ích, mà phần lớn thanh
+     cuộn xấu lại nằm trong cây DOM ta không gắn class được — panel của react-flow, nội dung
+     trong portal của Radix, vùng cuộn do thư viện tự dựng. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Viền trong suốt + `background-clip: content-box` cho nút kéo RỘNG 10px để bấm trúng nhưng chỉ
+     HIỆN 6px — mỏng về thị giác mà không khó bấm. */
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  /* Nút mũi tên hai đầu: Windows vẽ, không nơi nào khác trong app có thứ tương tự. */
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+  /* Chừa sẵn chỗ thanh cuộn trong vùng nội dung: không thì cả cột nhảy ngang ~10px mỗi lần đổi tab
+     hay dữ liệu vừa tải làm trang dài ra (thanh cuộn chỉ hiện khi tràn). */
+  #dash-main .overflow-y-auto {
+    scrollbar-gutter: stable;
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------------ kính: KHỐI CHỨA
+     Dùng cho card, sidebar, header, rail — thứ CHỨA nội dung khác.
+
+     KHÔNG blur: nền là một màu phẳng, blur nó không đổi được pixel nào mà vẫn tốn một lớp
+     compositing mỗi lần cuộn/vẽ lại (3–5 lớp mỗi trang). `::before` chỉ còn để vẽ VÒNG SÁNG mép
+     (`--glass-highlight`) — thứ tạo cảm giác "mặt kính" trên một tấm đục.
+
+     `z-index: auto` (không phải -1): tấm giờ ĐỤC, để -1 thì vòng sáng nằm dưới màu nền của chính tấm
+     → biến mất. `auto` đặt nó trên nội dung trong-luồng; nó trong suốt, chỉ vẽ nét 1px ở mép, và
+     `pointer-events: none` nên không chặn bấm/chọn chữ. Không tạo stacking context → thanh lưu nổi
+     `fixed z-20` trong bypass-proxy/RulesTab vẫn nổi đúng.
+
+     VẪN CẤM đặt `backdrop-filter` thẳng lên khối chứa: nó biến phần tử thành containing block của
+     mọi con `position: fixed` (thanh lưu nổi kia sẽ bị ghim vào góc card). */
+  .glass {
+    position: relative;
+  }
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: var(--glass-highlight);
+  }
+
+  /* ------------------------------------------------------------ kính: LỚP PHỦ
+     Dialog, sheet, dropdown, select, tooltip — nằm ĐÈ lên nội dung nên đây là nơi kính hiện ra.
+     Ở đây đặt `backdrop-filter` thẳng lên phần tử được: chúng được portal ra <body> và vốn đã có
+     transform (translate/zoom khi mở) → vốn đã là containing block của con fixed, không mất gì
+     thêm. Đặt thẳng còn là BẮT BUỘC: chúng fade bằng `opacity`, mà phần tử opacity<1 là "backdrop
+     root" của con cháu → nếu dùng `::before` thì blur tắt suốt lúc animation rồi bật phụt lên. */
+  .glass-float {
+    -webkit-backdrop-filter: blur(var(--float-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--float-blur)) saturate(var(--glass-saturate));
+    /* bóng TẦNG NỔI: trên nền phẳng, menu trắng trên bảng trắng không tách được bằng sắc độ */
+    box-shadow: var(--float-highlight), var(--float-shadow);
+  }
+
+  /* ------------------------------------------------------------ kính: HEADER TRANG (sticky)
+     Nền trang phẳng → kính chỉ THẤY được khi đè lên nội dung thật. Header trang dính ở mép trên vùng
+     cuộn: đứng yên thì cùng màu nền (canvas 72%), cuộn thì bảng/danh sách trôi bên dưới và hiện ra MỜ.
+     Viền dưới + bóng chỉ xuất hiện khi đã có nội dung trôi dưới nó — dùng scroll-driven animation
+     (`animation-timeline: scroll()`, Chromium/WebView2), không cần JS.
+     backdrop-filter đặt thẳng lên header được: nó không chứa con `position: fixed` nào (menu/tooltip
+     của các nút trong header đều portal ra body). */
+  .page-header-glass {
+    background-color: color-mix(in oklab, var(--canvas) 72%, transparent);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+    backdrop-filter: blur(0px) saturate(100%);
+    /* Tấm nổi bo tròn (PageHeader: rounded-2xl, top-3) → KHÔNG còn viền dưới kiểu dải tràn mép; viền là
+       vòng bo tròn trên ::after bên dưới. border-width 0 để các theme (keyframes của chúng vẫn đổi
+       border-bottom-color) không vẽ lại một nét cong lẻ loi ở đáy. */
+    border-width: 0;
+    animation: page-header-stuck linear both;
+    animation-timeline: scroll(nearest block);
+    animation-range: 0 24px;
+  }
+  /* Viền của tấm header, hiện dần khi có nội dung trôi dưới. Ở ::after với animation RIÊNG: theme chỉ thay
+     `animation-name` của chính header, nên vòng viền này giữ nguyên ở mọi phong cách. */
+  .page-header-glass::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px var(--glass-edge);
+    opacity: 0;
+    animation: page-header-ring linear both;
+    animation-timeline: scroll(nearest block);
+    animation-range: 0 24px;
+  }
+  @keyframes page-header-stuck {
+    to {
+      -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+      box-shadow: var(--glass-shadow);
+    }
+  }
+  @keyframes page-header-stuck-solid {
+    to {
+      box-shadow: var(--glass-shadow);
+    }
+  }
+  @keyframes page-header-ring {
+    to {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .page-header-glass {
+      background-color: var(--canvas);
+      animation-name: page-header-stuck-solid;
+    }
+    .page-header-glass,
+    .glass-float {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------------ kính: TOAST (sonner)
+   CỐ Ý nằm NGOÀI mọi @layer: sonner tự chèn CSS của nó dạng unlayered, mà CSS unlayered luôn thắng
+   CSS trong @layer bất kể specificity → đặt trong layer thì box-shadow của sonner đè mất. Ở ngoài
+   layer thì so specificity bình thường: `.toaster` + 2 attribute (0,3,0) > của sonner (0,2,0).
+   Màu nền/viền đã trỏ về token kính qua biến `--normal-*` trong `components/ui/sonner.tsx`. */
+.toaster [data-sonner-toast][data-styled='true'] {
+  -webkit-backdrop-filter: blur(var(--float-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--float-blur)) saturate(var(--glass-saturate));
+  box-shadow: var(--float-highlight), var(--float-shadow);
+}
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .toaster [data-sonner-toast][data-styled='true'] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@font-face {
+  font-family: "Ndot57";
+  src: url("/assets/fonts/Ndot-57-UpAndLow.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist";
+  src: url("/assets/fonts/Geist-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GeistMono";
+  src: url("/assets/fonts/GeistMono-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* ------------------------------------------------------------ chữ
+   Độ phủ tiếng Việt (kiểm bằng fontTools, cmap): Geist + GeistMono đủ 134/134 ký tự Việt (ă â đ ê ô ơ ư,
+   hoa/thường + toàn bộ U+1EA0–1EF9) → dùng thẳng, không cần fallback. Ndot57 (và Ndot55/NType82) chỉ có
+   Latin cơ bản — THIẾU ă đ ơ ư và mọi chữ có dấu thanh. Fallback theo unicode-range sẽ trộn chữ chấm với
+   chữ Geist ngay giữa một từ ("T·ổ·ng") nên KHÔNG dùng: khi trang ở tiếng Việt, chữ hiển thị (tiêu đề trang,
+   .font-display) chuyển hẳn sang GeistMono; `.font-ndot` chỉ gắn cho chuỗi ASCII (tên app) nên giữ Ndot. */
+:root {
+  --font-display-family: "Ndot57", "GeistMono", ui-monospace, monospace;
+  --font-display-tracking: 0.04em;
+}
+:root:lang(vi) {
+  --font-display-family: "GeistMono", ui-monospace, monospace;
+  --font-display-tracking: 0;
+}
+body {
+  font-family: var(--font-sans);
+}
+code, pre, .font-mono {
+  font-family: var(--font-mono);
+}
+.font-ndot {
+  font-family: "Ndot57", "GeistMono", ui-monospace, monospace;
+  letter-spacing: 0.04em;
+}
+[data-ui="page-header"] h1 {
+  font-family: var(--font-display-family);
+  letter-spacing: var(--font-display-tracking);
+}
+
+@layer utilities {
+  /* tracking-* đi kèm vẫn ghi đè được (cùng layer, khai báo sau) */
+  .font-display {
+    font-family: var(--font-display-family);
+  }
+  /* lưới chấm kiểu Nothing — dùng màu chữ hiện hành ở độ đậm thấp, tự đúng ở sáng/tối */
+  .dot-matrix-bg {
+    background-image: radial-gradient(
+      circle at center,
+      color-mix(in oklab, currentColor 35%, transparent) 1px,
+      transparent 1.2px
+    );
+    background-size: 10px 10px;
+    background-position: center;
+  }
+}

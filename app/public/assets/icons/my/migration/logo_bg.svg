@@ -1,0 +1,9 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="nx app icon">
+<path d="M0.5 16C0.5 7.43959 7.43959 0.5 16 0.5H80C88.5604 0.5 95.5 7.43959 95.5 16V80C95.5 88.5604 88.5604 95.5 80 95.5H16C7.43959 95.5 0.5 88.5604 0.5 80V16Z" fill="white"/>
+<path d="M0.5 16C0.5 7.43959 7.43959 0.5 16 0.5H80C88.5604 0.5 95.5 7.43959 95.5 16V80C95.5 88.5604 88.5604 95.5 80 95.5H16C7.43959 95.5 0.5 88.5604 0.5 80V16Z" stroke="#C8C8C8"/>
+<rect id="Rectangle 317" opacity="0.2" x="81.9412" y="34.2114" width="67.5" height="28.5" rx="14.25" transform="rotate(135 81.9412 34.2114)" fill="black"/>
+<rect id="Rectangle 318" x="34.0276" y="13.875" width="67.5" height="28.5" rx="14.25" transform="rotate(45 34.0276 13.875)" fill="black"/>
+<circle id="Ellipse 20734" cx="61.7886" cy="61.7886" r="10.5" transform="rotate(45 61.7886 61.7886)" fill="#D71921"/>
+</g>
+</svg>
